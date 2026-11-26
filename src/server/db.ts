@@ -19,8 +19,23 @@ function create() {
   });
 }
 
-export const prisma: PrismaClient = globalForPrisma.__prisma ?? create();
-if (process.env.NODE_ENV !== "production") globalForPrisma.__prisma = prisma;
+/** The real client, created on first use (one per process; reused across dev reloads). */
+function client(): PrismaClient {
+  return (globalForPrisma.__prisma ??= create());
+}
+
+/**
+ * Lazily-connected client: importing this module never needs a database, so `next build`
+ * (which imports server code while collecting page data) works without DATABASE_URL.
+ * The first property access creates the real client.
+ */
+export const prisma: PrismaClient = new Proxy({} as PrismaClient, {
+  get(_target, prop) {
+    const c = client();
+    const value = Reflect.get(c, prop, c);
+    return typeof value === "function" ? value.bind(c) : value;
+  },
+});
 
 export type Tx = Parameters<Parameters<PrismaClient["$transaction"]>[0]>[0];
 export type Db = PrismaClient | Tx;
