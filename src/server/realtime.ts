@@ -11,6 +11,7 @@
  *   trigger a refetch that is authorized as the current actor).
  */
 import { Client } from "pg";
+import { runtimeDatabaseUrl } from "./db-url";
 import type { Db } from "./db";
 import { log } from "./log";
 
@@ -65,7 +66,7 @@ class Hub {
     if (this.client) return Promise.resolve();
     if (this.connecting) return this.connecting;
     this.connecting = (async () => {
-      const client = new Client({ connectionString: process.env.DATABASE_URL, options: "-c timezone=UTC" });
+      const client = new Client({ connectionString: runtimeDatabaseUrl(), options: "-c timezone=UTC" });
       client.on("notification", (msg) => {
         if (msg.channel !== CHANNEL || !msg.payload) return;
         let e: RealtimeEvent;
