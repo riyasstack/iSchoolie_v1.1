@@ -3,6 +3,9 @@
 Project: **ischoolie_v2.1** (team `green-9edc`), Git-linked to `riyasstack/iSchoolie_v1.1`
 branch `main` — every push to `main` deploys to production.
 
+Production URL: **https://ischooliev21.vercel.app** (deployment-specific URLs such as
+`ischooliev21-xxxx-green-9edc.vercel.app` sit behind Vercel's login protection).
+
 ## 1. Project settings
 
 - Framework preset: Next.js (also set by `vercel.json`)
@@ -30,10 +33,18 @@ INLINE_JOBS=true
 FORCE_SECURE_COOKIES=true
 ```
 
-Database connection: provided by the **Supabase ↔ Vercel integration** (Supabase →
-Project Settings → Integrations → Vercel, linked to `ischoolie_v2.1`). It syncs
-`POSTGRES_PRISMA_URL`, `POSTGRES_URL`, `POSTGRES_URL_NON_POOLING`, … The app reads them
-when `DATABASE_URL` / `DIRECT_URL` aren't set (`src/server/db-url.ts`).
+Database connection (as deployed):
+
+- `DATABASE_URL` (Secret) — the Supabase connection string with the DB password.
+- `SUPABASE_POOLER_HOST=aws-0-ap-northeast-1.pooler.supabase.com` (Config).
+  Supabase's direct host `db.<ref>.supabase.co` is IPv6-only and unreachable from Vercel;
+  with this set, the app rewrites a direct URL to the project's IPv4 pooler (transaction
+  mode, port 6543, user `postgres.<ref>`). See `src/server/db-url.ts`.
+
+Alternatively the **Supabase ↔ Vercel integration** can sync `POSTGRES_PRISMA_URL`,
+`POSTGRES_URL_NON_POOLING`, … — the app reads those when `DATABASE_URL` isn't set. When
+installing it, choose **Link Existing Supabase Account**; the default *Create New* makes a
+separate empty database.
 
 Secrets still to add by hand (type *Secret*), when needed:
 
