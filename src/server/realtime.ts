@@ -116,6 +116,10 @@ export const hub: Hub = g.__iscHub ?? (g.__iscHub = new Hub());
 
 /** Server-Sent Events response streaming the actor's realtime events. */
 export function sseResponse(actorId: string, workspaceId: string, signal: AbortSignal): Response {
+  // Serverless hosts can't hold a LISTEN connection or long-lived streams through a
+  // transaction pooler. REALTIME=off answers 204, which tells EventSource not to
+  // reconnect; the client then relies on its polling fallback.
+  if (process.env.REALTIME === "off") return new Response(null, { status: 204, headers: { "cache-control": "no-store" } });
   const enc = new TextEncoder();
   let unsubscribe = () => {};
   let heartbeat: ReturnType<typeof setInterval> | undefined;

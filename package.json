@@ -24,7 +24,8 @@
     "postinstall": "prisma generate",
     "test:unit": "vitest run tests/unit",
     "live:bootstrap": "tsx scripts/live-bootstrap.ts",
-    "dev:live": "node scripts/dev-live.mjs"
+    "dev:live": "node scripts/dev-live.mjs",
+    "vercel-build": "prisma generate && prisma migrate deploy && next build"
   },
   "engines": {
     "node": ">=20.19"

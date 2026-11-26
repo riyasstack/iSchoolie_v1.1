@@ -21,6 +21,11 @@ const nextConfig: NextConfig = {
   },
   poweredByHeader: false,
   serverExternalPackages: ["sharp", "embedded-postgres", "@prisma/client", "pg"],
+  // Seed media is read from disk at runtime (storage "seed/" keys), outside the module
+  // graph, so serverless bundles must include it explicitly.
+  outputFileTracingIncludes: {
+    "/api/[...path]": ["./assets/seed/**/*"],
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
