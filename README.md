@@ -1,0 +1,148 @@
+# iSchoolie
+
+A consumer social network web app with the layout, density and interaction patterns of
+the **September 2020** responsive Twitter website, branded as iSchoolie (Posts, Reposts,
+Quote Posts). One responsive codebase for phone, tablet and desktop.
+
+> **Status: functioning, isolated demo environment — not a public production service.**
+> There is no sign-in. Each browser session gets its own private, server-persisted
+> workspace filled with fictional people and posts. See [AUTH_INTEGRATION.md](AUTH_INTEGRATION.md)
+> for the future authentication phase.
+
+- Architecture & persistence: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- Screen/feature checklist with verification status: [docs/CHECKLIST.md](docs/CHECKLIST.md)
+- Test and performance results: [docs/TEST_RESULTS.md](docs/TEST_RESULTS.md)
+- Visual references vs inferences: [docs/REFERENCE_NOTES.md](docs/REFERENCE_NOTES.md)
+- Screenshots: [docs/screenshots/](docs/screenshots)
+
+## Stack
+
+Next.js 16 (App Router) · React 19 · strict TypeScript · Tailwind CSS 4 with CSS-variable
+tokens · Radix primitives · TanStack Query · zod · PostgreSQL 17 + Prisma 7 (driver
+adapter) · sharp · twitter-text (Apache-2.0) for the weighted 280 count · Vitest +
+Testing Library · Playwright.
+
+## Requirements
+
+- Node.js ≥ 20.19 (developed on 24.20) and npm 11
+- PostgreSQL 15+ — either the bundled project-local server (`npm run db:start`) or your own
+
+## Setup
+
+```powershell
+npm install
+copy .env.example .env
+```
+
+Generate a session secret and put it in `.env` as `SESSION_SECRET`:
+
+```powershell
+node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
+```
+
+> `npm install` may warn that some packages' install scripts aren't covered by
+> `allowScripts`. Prisma, `@prisma/engines`, `@embedded-postgres/windows-x64` and `esbuild`
+> need theirs; they are approved in `package.json`.
+
+## Run (development)
+
+Three processes. Either run them in separate terminals:
+
+```powershell
+npm run db:start
+```
+
+```powershell
+npm run db:migrate
+```
+
+```powershell
+npm run dev
+```
+
+```powershell
+npm run worker
+```
+
+…or all of them (database, web, worker) together after migrating once:
+
+```powershell
+npm run dev:all
+```
+
+Open http://localhost:3000 — you land directly on a populated Home feed.
+
+- `db:start` runs a real PostgreSQL 17 (embedded-postgres) on port 54329 with data in
+  `.data/postgres`, UTF-8, sessions pinned to UTC. To use your own server, set
+  `DATABASE_URL` and skip `db:start`.
+- The **worker** publishes scheduled posts and deletes expired demo workspaces. Without
+  it, scheduled posts stay pending.
+- Uploaded media is stored under `.data/storage` (survives restarts).
+
+## Production build
+
+```powershell
+npm run build
+```
+
+```powershell
+npm run start
+```
+
+Run `npm run worker` alongside it. `APP_MODE` must be set explicitly (`demo` or `live`);
+it is independent of `NODE_ENV`. `live` refuses private requests until authentication is
+integrated.
+
+## Tests
+
+```powershell
+npm run lint
+```
+
+```powershell
+npm run typecheck
+```
+
+```powershell
+npm test
+```
+
+```powershell
+npm run test:e2e
+```
+
+- `npm test` migrates the separate `ischoolie_test` database, then runs unit and
+  integration tests (services against real PostgreSQL).
+- `npm run test:e2e` needs the database (and the worker for the scheduling journey); it
+  starts the dev server if it isn't running. The responsive journey writes screenshots to
+  `docs/screenshots`.
+
+## Other scripts
+
+| Script | Purpose |
+|---|---|
+| `npm run seed:check` | Seeds a throwaway workspace, prints counts, verifies invariants, deletes it |
+| `npm run assets:brand` | Rebuilds web brand assets from the supplied logo master |
+| `npm run assets:seed` | Regenerates the original seed media (uses Playwright's bundled ffmpeg for the sample video) |
+| `npm run db:reset` | Drops and re-migrates the dev database (development only) |
+| `npx tsx scripts/measure-performance.ts http://localhost:3100` | Load/CLS metrics against a running server |
+| `npx tsx scripts/capture-themes.ts` | Screenshots of Home in Default / Dim / Lights out |
+
+## Environment variables
+
+See [.env.example](.env.example): `APP_MODE`, `DATABASE_URL`, `EMBEDDED_PG_PORT`,
+`SESSION_SECRET`, `DEMO_RETENTION_DAYS`, `DEMO_PROVISION_LIMIT_PER_HOUR`, `STORAGE_DRIVER`,
+`STORAGE_DIR`, `FORCE_SECURE_COOKIES`. Secrets never reach the browser bundle.
+
+## Demo controls
+
+Clearly labelled demo-only controls (account menu, drawer, Settings → Demo environment):
+switch to another seeded fictional identity in your workspace, or reset your workspace.
+They don't exist in live mode.
+
+## Public-release requirements (not done here)
+
+Real authentication (see AUTH_INTEGRATION.md), an object-storage adapter, video
+processing, a staffed moderation workflow for reports, push/email delivery services,
+scale work (full-text search, counters, caching), trusted-proxy configuration for IP rate
+limits, and a security review. Do not deploy publicly as-is.

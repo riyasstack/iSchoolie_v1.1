@@ -1,0 +1,328 @@
+@import "tailwindcss";
+
+/*
+ * iSchoolie legacy visual system (September 2020 layout baseline).
+ * Tokens live on :root and switch by [data-theme] / [data-accent]. Tailwind utilities
+ * map to these variables, so components never hard-code theme colors.
+ */
+
+:root {
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-scale: 100;
+
+  /* Default */
+  --bg: #ffffff;
+  --fg: #14171a;
+  --fg-secondary: #657786;
+  --border: #e6ecf0;
+  --border-strong: #ccd6dd;
+  --subtle: #f5f8fa;
+  --hover: rgba(20, 23, 26, 0.03);
+  --hover-strong: rgba(20, 23, 26, 0.06);
+  --elevated: #ffffff;
+  --overlay: rgba(0, 0, 0, 0.4);
+  --media-overlay: rgba(0, 0, 0, 0.9);
+  --shadow: rgba(101, 119, 134, 0.2) 0 0 15px, rgba(101, 119, 134, 0.15) 0 0 3px 1px;
+  --input-bg: #f5f8fa;
+
+  --accent: #1839e8;
+  --accent-hover: #142fc4;
+  --accent-on: #ffffff;
+  --accent-text: #1839e8;
+  --accent-soft: rgba(24, 57, 232, 0.1);
+  --accent-softer: rgba(24, 57, 232, 0.05);
+
+  --repost: #17bf63;
+  --repost-soft: rgba(23, 191, 99, 0.1);
+  --like: #e0245e;
+  --like-soft: rgba(224, 36, 94, 0.1);
+  --danger: #e0245e;
+  --danger-hover: #c51f52;
+  --warning: #ffad1f;
+  --success: #17bf63;
+
+  --brand: #1839e8;
+  --brand-ink: #14151b;
+
+  /* Layout */
+  --w-main: 600px;
+  --w-nav: 275px;
+  --w-nav-rail: 88px;
+  --w-side: 350px;
+  --w-side-narrow: 290px;
+  --h-header: 53px;
+  --h-bottom-nav: 53px;
+
+  /* Motion */
+  --dur: 150ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+
+  color-scheme: light;
+}
+
+:root[data-theme="DIM"] {
+  --bg: #15202b;
+  --fg: #ffffff;
+  --fg-secondary: #8899a6;
+  --border: #38444d;
+  --border-strong: #4a5864;
+  --subtle: #192734;
+  --hover: rgba(255, 255, 255, 0.03);
+  --hover-strong: rgba(255, 255, 255, 0.07);
+  --elevated: #15202b;
+  --overlay: rgba(91, 112, 131, 0.4);
+  --shadow: rgba(136, 153, 166, 0.2) 0 0 15px, rgba(136, 153, 166, 0.15) 0 0 3px 1px;
+  --input-bg: #253341;
+  --accent-text: #8ea1ff;
+  --accent-soft: rgba(142, 161, 255, 0.12);
+  --accent-softer: rgba(142, 161, 255, 0.06);
+  color-scheme: dark;
+}
+
+:root[data-theme="LIGHTS_OUT"] {
+  --bg: #000000;
+  --fg: #d9d9d9;
+  --fg-secondary: #6e767d;
+  --border: #2f3336;
+  --border-strong: #42474b;
+  --subtle: #16181c;
+  --hover: rgba(255, 255, 255, 0.03);
+  --hover-strong: rgba(255, 255, 255, 0.07);
+  --elevated: #000000;
+  --overlay: rgba(91, 112, 131, 0.4);
+  --shadow: rgba(255, 255, 255, 0.2) 0 0 15px, rgba(255, 255, 255, 0.15) 0 0 3px 1px;
+  --input-bg: #202327;
+  --accent-text: #8ea1ff;
+  --accent-soft: rgba(142, 161, 255, 0.12);
+  --accent-softer: rgba(142, 161, 255, 0.06);
+  color-scheme: dark;
+}
+
+/* Accent options (2020 display settings). Fill colors keep ≥4.5:1 contrast with --accent-on. */
+:root[data-accent="yellow"] { --accent: #f5a300; --accent-hover: #d88f00; --accent-on: #14171a; --accent-text: #a86b00; --accent-soft: rgba(245, 163, 0, 0.12); --accent-softer: rgba(245, 163, 0, 0.06); }
+:root[data-accent="pink"] { --accent: #c81e55; --accent-hover: #ad1a4a; --accent-text: #c81e55; --accent-soft: rgba(224, 36, 94, 0.1); --accent-softer: rgba(224, 36, 94, 0.05); }
+:root[data-accent="purple"] { --accent: #794bc4; --accent-hover: #6a3fb0; --accent-text: #794bc4; --accent-soft: rgba(121, 75, 196, 0.1); --accent-softer: rgba(121, 75, 196, 0.05); }
+:root[data-accent="orange"] { --accent: #c94a16; --accent-hover: #b03f10; --accent-text: #c94a16; --accent-soft: rgba(244, 93, 34, 0.1); --accent-softer: rgba(244, 93, 34, 0.05); }
+:root[data-accent="green"] { --accent: #0e8a4b; --accent-hover: #0b7540; --accent-text: #0e8a4b; --accent-soft: rgba(23, 191, 99, 0.1); --accent-softer: rgba(23, 191, 99, 0.05); }
+:root[data-theme="DIM"][data-accent="yellow"], :root[data-theme="LIGHTS_OUT"][data-accent="yellow"] { --accent-text: #ffc24d; }
+:root[data-theme="DIM"][data-accent="pink"], :root[data-theme="LIGHTS_OUT"][data-accent="pink"] { --accent-text: #ff6b9a; }
+:root[data-theme="DIM"][data-accent="purple"], :root[data-theme="LIGHTS_OUT"][data-accent="purple"] { --accent-text: #b18cff; }
+:root[data-theme="DIM"][data-accent="orange"], :root[data-theme="LIGHTS_OUT"][data-accent="orange"] { --accent-text: #ff8a5c; }
+:root[data-theme="DIM"][data-accent="green"], :root[data-theme="LIGHTS_OUT"][data-accent="green"] { --accent-text: #3ddc84; }
+
+@theme inline {
+  --font-sans: var(--font-sans);
+  --color-bg: var(--bg);
+  --color-fg: var(--fg);
+  --color-fg2: var(--fg-secondary);
+  --color-line: var(--border);
+  --color-line-strong: var(--border-strong);
+  --color-subtle: var(--subtle);
+  --color-hover: var(--hover);
+  --color-hover-strong: var(--hover-strong);
+  --color-elevated: var(--elevated);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-on: var(--accent-on);
+  --color-accent-text: var(--accent-text);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-softer: var(--accent-softer);
+  --color-repost: var(--repost);
+  --color-repost-soft: var(--repost-soft);
+  --color-like: var(--like);
+  --color-like-soft: var(--like-soft);
+  --color-danger: var(--danger);
+  --color-danger-hover: var(--danger-hover);
+  --color-input: var(--input-bg);
+  --color-brand: var(--brand);
+  --color-overlay: var(--overlay);
+}
+
+@theme {
+  --breakpoint-sm: 500px;
+  --breakpoint-md: 1002px;
+  --breakpoint-lg: 1092px;
+  --breakpoint-xl: 1282px;
+
+  /* Type scale (rem follows the user's font-size setting) */
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1rem;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.125rem;
+  --text-post: 0.9375rem;
+  --text-post--line-height: 1.25rem;
+  --text-detail: 1.4375rem;
+  --text-detail--line-height: 1.75rem;
+  --text-heading: 1.1875rem;
+  --text-heading--line-height: 1.5rem;
+  --text-nav: 1.1875rem;
+  --text-nav--line-height: 1.5rem;
+  --text-title: 1.3125rem;
+  --text-title--line-height: 1.5rem;
+  --text-display: 1.4375rem;
+  --text-display--line-height: 1.75rem;
+
+  --radius-pill: 9999px;
+  --radius-card: 16px;
+  --shadow-menu: var(--shadow);
+}
+
+/* Base element styles live in the base layer so Tailwind utilities (layer: utilities) win. */
+@layer base {
+html {
+  font-size: calc(var(--font-scale) * 0.16px);
+  -webkit-text-size-adjust: 100%;
+  overflow-y: scroll;
+  background: var(--bg);
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--fg);
+  font-size: var(--text-post);
+  line-height: var(--text-post--line-height);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100dvh;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 2px;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: default;
+}
+
+::selection {
+  background: var(--accent-soft);
+}
+}
+
+/* Motion: short and subtle; disabled for reduced motion (OS or in-app preference). */
+.motion-fade {
+  animation: fade-in var(--dur) var(--ease);
+}
+.motion-pop {
+  animation: pop-in var(--dur) var(--ease);
+}
+.motion-slide-up {
+  animation: slide-up 180ms var(--ease);
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes pop-in {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes like-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+.like-pop {
+  animation: like-pop 180ms var(--ease);
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.spin {
+  animation: spin 0.8s linear infinite;
+}
+@keyframes shimmer {
+  0% { opacity: 0.55; }
+  50% { opacity: 1; }
+  100% { opacity: 0.55; }
+}
+.skeleton {
+  background: var(--hover-strong);
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+:root[data-reduced-motion="true"] *,
+:root[data-reduced-motion="true"] *::before,
+:root[data-reduced-motion="true"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Utilities */
+.break-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.header-blur {
+  background: color-mix(in srgb, var(--bg) 85%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+/* Brand: swap to the dark-surface artwork variant in dark themes. */
+/* These rules only hide the variant that doesn't match the theme; layout classes decide display. */
+:root:not([data-theme="DIM"]):not([data-theme="LIGHTS_OUT"]) .brand-dark { display: none !important; }
+:root[data-theme="DIM"] .brand-light,
+:root[data-theme="LIGHTS_OUT"] .brand-light { display: none !important; }
+
+/* Range input (font size slider) */
+input[type="range"].legacy-range {
+  appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--accent-soft);
+}
+input[type="range"].legacy-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+input[type="range"].legacy-range::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 0;
+}

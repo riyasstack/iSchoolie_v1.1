@@ -1,0 +1,931 @@
+// iSchoolie data model.
+//
+// Scoping: every record carries `workspaceId`. In demo mode each browser session
+// gets its own DemoWorkspace (an isolation namespace). In live mode a single
+// LIVE workspace holds the shared production network (see AUTH_INTEGRATION.md).
+//
+// Cross-record references use composite foreign keys (workspaceId, id) so a
+// valid id from another workspace cannot be attached, even indirectly.
+//
+// Counts (likes, reposts, followers ...) are derived from these authoritative
+// rows at read time; there are no UI-owned counters.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum WorkspaceKind {
+  DEMO
+  LIVE
+}
+
+enum Theme {
+  DEFAULT
+  DIM
+  LIGHTS_OUT
+}
+
+enum ReplyAudience {
+  EVERYONE
+  FOLLOWING
+  MENTIONED
+}
+
+enum MediaKind {
+  IMAGE
+  GIF
+  VIDEO
+}
+
+enum MediaStatus {
+  PENDING
+  READY
+  FAILED
+}
+
+enum MediaScope {
+  POST
+  MESSAGE
+  PROFILE
+  LIST
+  MOMENT
+}
+
+enum DmPolicy {
+  EVERYONE
+  FOLLOWING
+}
+
+enum ConversationKind {
+  DIRECT
+  GROUP
+}
+
+enum ParticipantRole {
+  ADMIN
+  MEMBER
+}
+
+enum ParticipantStatus {
+  ACCEPTED
+  REQUEST
+}
+
+enum MessageKind {
+  TEXT
+  SYSTEM
+}
+
+enum NotificationType {
+  LIKE
+  REPOST
+  REPLY
+  MENTION
+  QUOTE
+  FOLLOW
+  FOLLOW_REQUEST
+  FOLLOW_ACCEPTED
+  SUBSCRIBED_POST
+}
+
+enum ScheduledStatus {
+  PENDING
+  PUBLISHED
+  CANCELED
+  FAILED
+}
+
+enum JobStatus {
+  QUEUED
+  RUNNING
+  DONE
+  FAILED
+}
+
+enum ReportTarget {
+  POST
+  USER
+  MESSAGE
+  LIST
+}
+
+model DemoWorkspace {
+  id           String        @id @default(cuid())
+  kind         WorkspaceKind @default(DEMO)
+  seedVersion  Int
+  createdAt    DateTime      @default(now())
+  lastActiveAt DateTime      @default(now())
+  expiresAt    DateTime?
+
+  sessions         DemoSession[]
+  users            User[]
+  preferences      Preferences[]
+  follows          Follow[]
+  followRequests   FollowRequest[]
+  blocks           Block[]
+  mutes            Mute[]
+  mutedWords       MutedWord[]
+  posts            Post[]
+  mentions         Mention[]
+  likes            Like[]
+  reposts          Repost[]
+  media            MediaAsset[]
+  postMedia        PostMedia[]
+  polls            Poll[]
+  pollOptions      PollOption[]
+  pollVotes        PollVote[]
+  bookmarks        Bookmark[]
+  lists            List[]
+  listMembers      ListMember[]
+  listSubs         ListSubscription[]
+  listPins         ListPin[]
+  topics           Topic[]
+  topicFollows     TopicFollow[]
+  moments          Moment[]
+  momentItems      MomentItem[]
+  conversations    Conversation[]
+  participants     Participant[]
+  messages         Message[]
+  messageMedia     MessageAttachment[]
+  messageHidden    MessageHidden[]
+  messageReactions MessageReaction[]
+  notifications    Notification[]
+  hiddenReplies    HiddenReply[]
+  conversationMutes ConversationMute[]
+  savedSearches    SavedSearch[]
+  recentSearches   RecentSearch[]
+  drafts           Draft[]
+  scheduledPosts   ScheduledPost[]
+  reports          Report[]
+  postEvents       PostEvent[]
+  idempotency      IdempotencyRecord[]
+
+  @@index([kind, expiresAt])
+}
+
+model DemoSession {
+  // sha256 of the opaque token stored in the cookie; the token itself is never stored.
+  tokenHash   String        @id
+  workspaceId String
+  workspace   DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  actorId     String
+  actor       User          @relation(fields: [workspaceId, actorId], references: [workspaceId, id], onDelete: Cascade)
+  createdAt   DateTime      @default(now())
+  lastSeenAt  DateTime      @default(now())
+  expiresAt   DateTime
+
+  @@index([workspaceId])
+  @@index([expiresAt])
+}
+
+model RateLimit {
+  key         String
+  windowStart DateTime
+  count       Int      @default(0)
+
+  @@id([key, windowStart])
+  @@index([windowStart])
+}
+
+model User {
+  id               String        @id @default(cuid())
+  workspaceId      String
+  workspace        DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  handle           String
+  handleLower      String
+  displayName      String
+  bio              String        @default("")
+  location         String        @default("")
+  website          String        @default("")
+  avatarMediaId    String?
+  bannerMediaId    String?
+  isProtected      Boolean       @default(false)
+  // Fictional seeded badge meaning "iSchoolie demo team account". Never identity verification.
+  demoTeamBadge    Boolean       @default(false)
+  suspended        Boolean       @default(false)
+  // Seeded identities the demo actor switcher may select.
+  isSeedActor      Boolean       @default(true)
+  dmPolicy         DmPolicy      @default(EVERYONE)
+  pinnedPostId     String?
+  createdAt        DateTime      @default(now())
+
+  sessions          DemoSession[]
+  preferences       Preferences?
+  posts             Post[]              @relation("PostAuthor")
+  following         Follow[]            @relation("Follower")
+  followers         Follow[]            @relation("Followee")
+  sentRequests      FollowRequest[]     @relation("Requester")
+  receivedRequests  FollowRequest[]     @relation("RequestTarget")
+  blocking          Block[]             @relation("Blocker")
+  blockedBy         Block[]             @relation("Blocked")
+  muting            Mute[]              @relation("Muter")
+  mutedBy           Mute[]              @relation("Muted")
+  mutedWords        MutedWord[]
+  mentions          Mention[]
+  likes             Like[]
+  reposts           Repost[]
+  media             MediaAsset[]
+  pollVotes         PollVote[]
+  bookmarks         Bookmark[]
+  ownedLists        List[]
+  listMemberships   ListMember[]
+  listSubscriptions ListSubscription[]
+  listPins          ListPin[]
+  topicFollows      TopicFollow[]
+  moments           Moment[]
+  participants      Participant[]
+  messages          Message[]
+  messageHidden     MessageHidden[]
+  messageReactions  MessageReaction[]
+  notifications     Notification[]      @relation("NotificationRecipient")
+  actedNotifications Notification[]     @relation("NotificationActor")
+  hiddenReplies     HiddenReply[]
+  conversationMutes ConversationMute[]
+  savedSearches     SavedSearch[]
+  recentSearches    RecentSearch[]
+  drafts            Draft[]
+  scheduledPosts    ScheduledPost[]
+  reports           Report[]
+  createdConversations Conversation[]
+  postEvents        PostEvent[]
+
+  @@unique([workspaceId, id])
+  @@unique([workspaceId, handleLower])
+  @@index([workspaceId, displayName])
+}
+
+model Preferences {
+  userId            String        @id
+  workspaceId       String
+  workspace         DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user              User          @relation(fields: [workspaceId, userId], references: [workspaceId, id], onDelete: Cascade)
+  theme             Theme         @default(DEFAULT)
+  accent            String        @default("brand")
+  fontScale         Int           @default(100)
+  reducedMotion     Boolean       @default(false)
+  autoplay          Boolean       @default(true)
+  dataSaver         Boolean       @default(false)
+  showSensitiveMedia Boolean      @default(false)
+  altTextReminder   Boolean       @default(false)
+  timelineMode      String        @default("home")
+  // In-app notification preferences (no external delivery exists in this phase).
+  notifyLikes       Boolean       @default(true)
+  notifyReposts     Boolean       @default(true)
+  notifyReplies     Boolean       @default(true)
+  notifyMentions    Boolean       @default(true)
+  notifyFollows     Boolean       @default(true)
+  notifyQuotes      Boolean       @default(true)
+  // Advanced filter: hide notifications from people you don't follow.
+  filterNotFollowing Boolean      @default(false)
+  // Filter notifications from accounts without a profile photo.
+  filterNoAvatar    Boolean       @default(false)
+  showReadReceipts  Boolean       @default(true)
+  searchHideSensitive Boolean     @default(true)
+  updatedAt         DateTime      @updatedAt
+
+  @@unique([workspaceId, userId])
+}
+
+model Follow {
+  workspaceId String
+  workspace   DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  followerId  String
+  followeeId  String
+  follower    User          @relation("Follower", fields: [workspaceId, followerId], references: [workspaceId, id], onDelete: Cascade)
+  followee    User          @relation("Followee", fields: [workspaceId, followeeId], references: [workspaceId, id], onDelete: Cascade)
+  // Profile notification bell: in-app SUBSCRIBED_POST notifications for new posts.
+  notify      Boolean       @default(false)
+  createdAt   DateTime      @default(now())
+
+  @@id([followerId, followeeId])
+  @@index([workspaceId, followeeId])
+}
+
+model FollowRequest {
+  id          String        @id @default(cuid())
+  workspaceId String
+  workspace   DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  requesterId String
+  targetId    String
+  requester   User          @relation("Requester", fields: [workspaceId, requesterId], references: [workspaceId, id], onDelete: Cascade)
+  target      User          @relation("RequestTarget", fields: [workspaceId, targetId], references: [workspaceId, id], onDelete: Cascade)
+  createdAt   DateTime      @default(now())
+
+  @@unique([requesterId, targetId])
+  @@index([workspaceId, targetId])
+}
+
+model Block {
+  workspaceId String
+  workspace   DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  blockerId   String
+  blockedId   String
+  blocker     User          @relation("Blocker", fields: [workspaceId, blockerId], references: [workspaceId, id], onDelete: Cascade)
+  blocked     User          @relation("Blocked", fields: [workspaceId, blockedId], references: [workspaceId, id], onDelete: Cascade)
+  createdAt   DateTime      @default(now())
+
+  @@id([blockerId, blockedId])
+  @@index([workspaceId, blockedId])
+}
+
+model Mute {
+  workspaceId String
+  workspace   DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  muterId     String
+  mutedId     String
+  muter       User          @relation("Muter", fields: [workspaceId, muterId], references: [workspaceId, id], onDelete: Cascade)
+  muted       User          @relation("Muted", fields: [workspaceId, mutedId], references: [workspaceId, id], onDelete: Cascade)
+  createdAt   DateTime      @default(now())
+
+  @@id([muterId, mutedId])
+}
+
+model MutedWord {
+  id                 String        @id @default(cuid())
+  workspaceId        String
+  workspace          DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  userId             String
+  user               User          @relation(fields: [workspaceId, userId], references: [workspaceId, id], onDelete: Cascade)
+  phrase             String
+  phraseLower        String
+  inHome             Boolean       @default(true)
+  inNotifications    Boolean       @default(true)
+  expiresAt          DateTime?
+  createdAt          DateTime      @default(now())
+
+  @@unique([userId, phraseLower])
+}
+
+model Post {
+  id             String        @id @default(cuid())
+  workspaceId    String
+  workspace      DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  authorId       String
+  author         User          @relation("PostAuthor", fields: [workspaceId, authorId], references: [workspaceId, id], onDelete: Cascade)
+  text           String
+  textLower      String
+  hashtags       String[]
+  lang           String?
+  sensitive      Boolean       @default(false)
+  replyToId      String?
+  replyTo        Post?         @relation("Replies", fields: [workspaceId, replyToId], references: [workspaceId, id], onDelete: NoAction)
+  replies        Post[]        @relation("Replies")
+  // Root of the conversation (self for top-level posts is null).
+  conversationId String?
+  quotedPostId   String?
+  quotedPost     Post?         @relation("Quotes", fields: [workspaceId, quotedPostId], references: [workspaceId, id], onDelete: NoAction)
+  quotes         Post[]        @relation("Quotes")
+  replyAudience  ReplyAudience @default(EVERYONE)
+  // Idempotency key for client-created posts; publication key for scheduled publication.
+  clientKey      String?
+  publicationKey String?       @unique
+  createdAt      DateTime      @default(now())
+  // Soft delete keeps a tombstone so reply chains and quotes render "unavailable".
+  deletedAt      DateTime?
+
+  mentions     Mention[]
+  likes        Like[]
+  reposts      Repost[]
+  media        PostMedia[]
+  poll         Poll?
+  bookmarks    Bookmark[]
+  momentItems  MomentItem[]
+  notifications Notification[]
+  hiddenReply  HiddenReply?
+  conversationMutes ConversationMute[]
+  events       PostEvent[]
+  sharedInMessages Message[]
+
+  @@unique([workspaceId, id])
+  @@unique([authorId, clientKey])
+  @@index([workspaceId, createdAt])
+  @@index([workspaceId, authorId, createdAt])
+  @@index([workspaceId, replyToId])
+  @@index([workspaceId, conversationId])
+  @@index([workspaceId, quotedPostId])
+}
+
+model Mention {
+  workspaceId String
+  workspace   DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  postId      String
+  userId      String
+  post        Post          @relation(fields: [workspaceId, postId], references: [workspaceId, id], onDelete: Cascade)
+  user        User          @relation(fields: [workspaceId, userId], references: [workspaceId, id], onDelete: Cascade)
+
+  @@id([postId, userId])
+  @@index([workspaceId, userId])
+}
+
+model Like {
+  workspaceId String
+  workspace   DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  userId      String
+  postId      String
+  user        User          @relation(fields: [workspaceId, userId], references: [workspaceId, id], onDelete: Cascade)
+  post        Post          @relation(fields: [workspaceId, postId], references: [workspaceId, id], onDelete: Cascade)
+  createdAt   DateTime      @default(now())
+
+  @@id([userId, postId])
+  @@index([workspaceId, postId])
+  @@index([workspaceId, userId, createdAt])
+}
+
+model Repost {
+  workspaceId String
+  workspace   DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  userId      String
+  postId      String
+  user        User          @relation(fields: [workspaceId, userId], references: [workspaceId, id], onDelete: Cascade)
+  post        Post          @relation(fields: [workspaceId, postId], references: [workspaceId, id], onDelete: Cascade)
+  createdAt   DateTime      @default(now())
+
+  @@id([userId, postId])
+  @@index([workspaceId, postId])
+  @@index([workspaceId, userId, createdAt])
+}
+
+model MediaAsset {
+  id          String        @id @default(cuid())
+  workspaceId String
+  workspace   DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  ownerId     String
+  owner       User          @relation(fields: [workspaceId, ownerId], references: [workspaceId, id], onDelete: Cascade)
+  kind        MediaKind
+  scope       MediaScope
+  mime        String
+  storageKey  String
+  thumbKey    String?
+  width       Int?
+  height      Int?
+  bytes       Int
+  durationMs  Int?
+  alt         String        @default("")
+  status      MediaStatus   @default(READY)
+  error       String?
+  createdAt   DateTime      @default(now())
+
+  postLinks    PostMedia[]
+  messageLinks MessageAttachment[]
+
+  @@unique([workspaceId, id])
+  @@index([workspaceId, ownerId])
+}
+
+model PostMedia {
+  workspaceId String
+  workspace   DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  postId      String
+  mediaId     String
+  position    Int
+  post        Post          @relation(fields: [workspaceId, postId], references: [workspaceId, id], onDelete: Cascade)
+  media       MediaAsset    @relation(fields: [workspaceId, mediaId], references: [workspaceId, id], onDelete: Cascade)
+
+  @@id([postId, mediaId])
+  @@unique([mediaId])
+}
+
+model Poll {
+  id          String        @id @default(cuid())
+  workspaceId String
+  workspace   DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  postId      String        @unique
+  post        Post          @relation(fields: [workspaceId, postId], references: [workspaceId, id], onDelete: Cascade)
+  endsAt      DateTime
+  options     PollOption[]
+  votes       PollVote[]
+
+  @@unique([workspaceId, id])
+  @@unique([workspaceId, postId])
+}
+
+model PollOption {
+  id          String        @id @default(cuid())
+  workspaceId String
+  workspace   DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  pollId      String
+  poll        Poll          @relation(fields: [workspaceId, pollId], references: [workspaceId, id], onDelete: Cascade)
+  position    Int
+  label       String
+  votes       PollVote[]
+
+  @@unique([workspaceId, id])
+  @@unique([pollId, position])
+}
+
+model PollVote {
+  workspaceId String
+  workspace   DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  pollId      String
+  userId      String
+  optionId    String
+  poll        Poll          @relation(fields: [workspaceId, pollId], references: [workspaceId, id], onDelete: Cascade)
+  user        User          @relation(fields: [workspaceId, userId], references: [workspaceId, id], onDelete: Cascade)
+  option      PollOption    @relation(fields: [workspaceId, optionId], references: [workspaceId, id], onDelete: Cascade)
+  createdAt   DateTime      @default(now())
+
+  // One vote per actor per poll.
+  @@id([pollId, userId])
+  @@index([optionId])
+}
+
+model Bookmark {
+  workspaceId String
+  workspace   DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  userId      String
+  postId      String
+  user        User          @relation(fields: [workspaceId, userId], references: [workspaceId, id], onDelete: Cascade)
+  post        Post          @relation(fields: [workspaceId, postId], references: [workspaceId, id], onDelete: Cascade)
+  createdAt   DateTime      @default(now())
+
+  @@id([userId, postId])
+  @@index([workspaceId, userId, createdAt])
+}
+
+model List {
+  id            String        @id @default(cuid())
+  workspaceId   String
+  workspace     DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  ownerId       String
+  owner         User          @relation(fields: [workspaceId, ownerId], references: [workspaceId, id], onDelete: Cascade)
+  name          String
+  description   String        @default("")
+  bannerMediaId String?
+  isPrivate     Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+
+  members       ListMember[]
+  subscriptions ListSubscription[]
+  pins          ListPin[]
+
+  @@unique([workspaceId, id])
+  @@index([workspaceId, ownerId])
+}
+
+model ListMember {
+  workspaceId String
+  workspace   DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  listId      String
+  userId      String
+  list        List          @relation(fields: [workspaceId, listId], references: [workspaceId, id], onDelete: Cascade)
+  user        User          @relation(fields: [workspaceId, userId], references: [workspaceId, id], onDelete: Cascade)
+  addedAt     DateTime      @default(now())
+
+  @@id([listId, userId])
+  @@index([workspaceId, userId])
+}
+
+model ListSubscription {
+  workspaceId String
+  workspace   DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  listId      String
+  userId      String
+  list        List          @relation(fields: [workspaceId, listId], references: [workspaceId, id], onDelete: Cascade)
+  user        User          @relation(fields: [workspaceId, userId], references: [workspaceId, id], onDelete: Cascade)
+  createdAt   DateTime      @default(now())
+
+  @@id([listId, userId])
+  @@index([workspaceId, userId])
+}
+
+model ListPin {
+  workspaceId String
+  workspace   DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  listId      String
+  userId      String
+  list        List          @relation(fields: [workspaceId, listId], references: [workspaceId, id], onDelete: Cascade)
+  user        User          @relation(fields: [workspaceId, userId], references: [workspaceId, id], onDelete: Cascade)
+  createdAt   DateTime      @default(now())
+
+  @@id([listId, userId])
+}
+
+model Topic {
+  id          String        @id @default(cuid())
+  workspaceId String
+  workspace   DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  slug        String
+  name        String
+  category    String
+  description String
+  keywords    String[]
+  follows     TopicFollow[]
+
+  @@unique([workspaceId, id])
+  @@unique([workspaceId, slug])
+}
+
+model TopicFollow {
+  workspaceId String
+  workspace   DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  topicId     String
+  userId      String
+  topic       Topic         @relation(fields: [workspaceId, topicId], references: [workspaceId, id], onDelete: Cascade)
+  user        User          @relation(fields: [workspaceId, userId], references: [workspaceId, id], onDelete: Cascade)
+  createdAt   DateTime      @default(now())
+
+  @@id([topicId, userId])
+}
+
+model Moment {
+  id           String        @id @default(cuid())
+  workspaceId  String
+  workspace    DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  ownerId      String
+  owner        User          @relation(fields: [workspaceId, ownerId], references: [workspaceId, id], onDelete: Cascade)
+  title        String
+  description  String        @default("")
+  coverMediaId String?
+  publishedAt  DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  items        MomentItem[]
+
+  @@unique([workspaceId, id])
+  @@index([workspaceId, ownerId])
+}
+
+model MomentItem {
+  workspaceId String
+  workspace   DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  momentId    String
+  postId      String
+  position    Int
+  moment      Moment        @relation(fields: [workspaceId, momentId], references: [workspaceId, id], onDelete: Cascade)
+  post        Post          @relation(fields: [workspaceId, postId], references: [workspaceId, id], onDelete: Cascade)
+
+  @@id([momentId, postId])
+}
+
+model Conversation {
+  id            String           @id @default(cuid())
+  workspaceId   String
+  workspace     DemoWorkspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  kind          ConversationKind
+  name          String?
+  // Sorted "a:b" user-id pair for DIRECT conversations, so there is one per pair.
+  directKey     String?
+  createdById   String
+  createdBy     User             @relation(fields: [workspaceId, createdById], references: [workspaceId, id], onDelete: Cascade)
+  createdAt     DateTime         @default(now())
+  lastMessageAt DateTime         @default(now())
+
+  participants Participant[]
+  messages     Message[]
+
+  @@unique([workspaceId, id])
+  @@unique([workspaceId, directKey])
+  @@index([workspaceId, lastMessageAt])
+}
+
+model Participant {
+  workspaceId    String
+  workspace      DemoWorkspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  conversationId String
+  userId         String
+  conversation   Conversation      @relation(fields: [workspaceId, conversationId], references: [workspaceId, id], onDelete: Cascade)
+  user           User              @relation(fields: [workspaceId, userId], references: [workspaceId, id], onDelete: Cascade)
+  role           ParticipantRole   @default(MEMBER)
+  status         ParticipantStatus @default(ACCEPTED)
+  joinedAt       DateTime          @default(now())
+  leftAt         DateTime?
+  // Viewer removed the conversation from their inbox; a newer message brings it back.
+  hiddenBefore   DateTime?
+  lastReadAt     DateTime          @default(now())
+  muted          Boolean           @default(false)
+  draft          String            @default("")
+
+  @@id([conversationId, userId])
+  @@index([workspaceId, userId])
+}
+
+model Message {
+  id             String        @id @default(cuid())
+  workspaceId    String
+  workspace      DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  conversationId String
+  senderId       String
+  conversation   Conversation  @relation(fields: [workspaceId, conversationId], references: [workspaceId, id], onDelete: Cascade)
+  sender         User          @relation(fields: [workspaceId, senderId], references: [workspaceId, id], onDelete: Cascade)
+  kind           MessageKind   @default(TEXT)
+  text           String        @default("")
+  sharedPostId   String?
+  sharedPost     Post?         @relation(fields: [workspaceId, sharedPostId], references: [workspaceId, id], onDelete: NoAction)
+  // Client-generated id: retries with the same key return the same message.
+  clientKey      String
+  createdAt      DateTime      @default(now())
+
+  attachments MessageAttachment[]
+  hiddenFor   MessageHidden[]
+  reactions   MessageReaction[]
+
+  @@unique([workspaceId, id])
+  @@unique([senderId, clientKey])
+  @@index([workspaceId, conversationId, createdAt])
+}
+
+model MessageAttachment {
+  workspaceId String
+  workspace   DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  messageId   String
+  mediaId     String
+  message     Message       @relation(fields: [workspaceId, messageId], references: [workspaceId, id], onDelete: Cascade)
+  media       MediaAsset    @relation(fields: [workspaceId, mediaId], references: [workspaceId, id], onDelete: Cascade)
+
+  @@id([messageId, mediaId])
+  @@unique([mediaId])
+}
+
+model MessageHidden {
+  workspaceId String
+  workspace   DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  messageId   String
+  userId      String
+  message     Message       @relation(fields: [workspaceId, messageId], references: [workspaceId, id], onDelete: Cascade)
+  user        User          @relation(fields: [workspaceId, userId], references: [workspaceId, id], onDelete: Cascade)
+
+  @@id([messageId, userId])
+}
+
+model MessageReaction {
+  workspaceId String
+  workspace   DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  messageId   String
+  userId      String
+  emoji       String
+  message     Message       @relation(fields: [workspaceId, messageId], references: [workspaceId, id], onDelete: Cascade)
+  user        User          @relation(fields: [workspaceId, userId], references: [workspaceId, id], onDelete: Cascade)
+  createdAt   DateTime      @default(now())
+
+  @@id([messageId, userId])
+}
+
+model Notification {
+  id          String           @id @default(cuid())
+  workspaceId String
+  workspace   DemoWorkspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  recipientId String
+  actorId     String
+  recipient   User             @relation("NotificationRecipient", fields: [workspaceId, recipientId], references: [workspaceId, id], onDelete: Cascade)
+  actor       User             @relation("NotificationActor", fields: [workspaceId, actorId], references: [workspaceId, id], onDelete: Cascade)
+  type        NotificationType
+  postId      String?
+  post        Post?            @relation(fields: [workspaceId, postId], references: [workspaceId, id], onDelete: NoAction)
+  // Unique per (event type, actor, target): retried requests cannot duplicate events.
+  dedupeKey   String
+  createdAt   DateTime         @default(now())
+  readAt      DateTime?
+
+  @@unique([workspaceId, dedupeKey])
+  @@index([workspaceId, recipientId, createdAt])
+}
+
+model HiddenReply {
+  workspaceId String
+  workspace   DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  postId      String        @id
+  post        Post          @relation(fields: [workspaceId, postId], references: [workspaceId, id], onDelete: Cascade)
+  hiddenById  String
+  hiddenBy    User          @relation(fields: [workspaceId, hiddenById], references: [workspaceId, id], onDelete: Cascade)
+  createdAt   DateTime      @default(now())
+
+  @@unique([workspaceId, postId])
+}
+
+model ConversationMute {
+  workspaceId    String
+  workspace      DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  userId         String
+  // Root post id of the muted conversation.
+  rootPostId     String
+  user           User          @relation(fields: [workspaceId, userId], references: [workspaceId, id], onDelete: Cascade)
+  rootPost       Post          @relation(fields: [workspaceId, rootPostId], references: [workspaceId, id], onDelete: Cascade)
+  createdAt      DateTime      @default(now())
+
+  @@id([userId, rootPostId])
+}
+
+model SavedSearch {
+  id          String        @id @default(cuid())
+  workspaceId String
+  workspace   DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User          @relation(fields: [workspaceId, userId], references: [workspaceId, id], onDelete: Cascade)
+  query       String
+  createdAt   DateTime      @default(now())
+
+  @@unique([userId, query])
+}
+
+model RecentSearch {
+  id          String        @id @default(cuid())
+  workspaceId String
+  workspace   DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User          @relation(fields: [workspaceId, userId], references: [workspaceId, id], onDelete: Cascade)
+  query       String
+  createdAt   DateTime      @default(now())
+
+  @@unique([userId, query])
+}
+
+model Draft {
+  id          String        @id @default(cuid())
+  workspaceId String
+  workspace   DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User          @relation(fields: [workspaceId, userId], references: [workspaceId, id], onDelete: Cascade)
+  // { items: [{ text, mediaIds, poll }], replyAudience, replyToId?, quotedPostId? }
+  payload     Json
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([workspaceId, userId, updatedAt])
+}
+
+model ScheduledPost {
+  id              String          @id @default(cuid())
+  workspaceId     String
+  workspace       DemoWorkspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User            @relation(fields: [workspaceId, userId], references: [workspaceId, id], onDelete: Cascade)
+  payload         Json
+  // Stored in UTC; `timezone` is the IANA zone the author chose for display.
+  scheduledFor    DateTime
+  timezone        String
+  status          ScheduledStatus @default(PENDING)
+  publishedPostId String?
+  lastError       String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([workspaceId, userId, status])
+}
+
+model Job {
+  id          String    @id @default(cuid())
+  type        String
+  payload     Json
+  // e.g. "publish:<scheduledPostId>:<version>" — a job is enqueued once per key.
+  uniqueKey   String    @unique
+  runAt       DateTime
+  status      JobStatus @default(QUEUED)
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(5)
+  lockedAt    DateTime?
+  lockedBy    String?
+  lastError   String?
+  createdAt   DateTime  @default(now())
+  finishedAt  DateTime?
+
+  @@index([status, runAt])
+}
+
+model Report {
+  id          String        @id @default(cuid())
+  workspaceId String
+  workspace   DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  reporterId  String
+  reporter    User          @relation(fields: [workspaceId, reporterId], references: [workspaceId, id], onDelete: Cascade)
+  targetType  ReportTarget
+  targetId    String
+  category    String
+  details     String        @default("")
+  status      String        @default("received")
+  createdAt   DateTime      @default(now())
+
+  @@index([workspaceId, reporterId])
+}
+
+model PostEvent {
+  id          String        @id @default(cuid())
+  workspaceId String
+  workspace   DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  postId      String
+  actorId     String
+  type        String
+  post        Post          @relation(fields: [workspaceId, postId], references: [workspaceId, id], onDelete: Cascade)
+  actor       User          @relation(fields: [workspaceId, actorId], references: [workspaceId, id], onDelete: Cascade)
+  // One detail-open per actor per post per day.
+  dedupeKey   String
+  createdAt   DateTime      @default(now())
+
+  @@unique([workspaceId, dedupeKey])
+  @@index([workspaceId, postId])
+}
+
+model IdempotencyRecord {
+  workspaceId String
+  workspace   DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  key         String
+  resultId    String
+  createdAt   DateTime      @default(now())
+
+  @@id([workspaceId, key])
+}

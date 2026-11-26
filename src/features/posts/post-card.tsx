@@ -1,0 +1,638 @@
+"use client";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { memo, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
+import clsx from "clsx";
+import {
+  MessageCircle, Repeat2, Heart, Upload, MoreHorizontal, Pin, Hash, Trash2, BarChart3, UserPlus, UserMinus, ListPlus,
+  VolumeX, Ban, Flag, BellOff, Bell, EyeOff, Eye, Pencil, Link2, Mail, Bookmark, BookmarkMinus, Share2, Lock,
+} from "lucide-react";
+import { Avatar, DisplayName, Menu, MenuItem } from "@/components/ui/misc";
+import { ConfirmDialog } from "@/components/ui/dialog";
+import { useToast } from "@/components/ui/toast";
+import { useSession } from "@/components/providers";
+import { compactCount, fullTime, relativeTime, absoluteTitle, pollTimeLeft } from "@/lib/format";
+import { del, put, errorMessage } from "@/lib/api";
+import { RichText } from "./rich-text";
+import { MediaGrid, VideoPlayer } from "./post-media";
+import { isPost, usePost, useToggle, useVote, useDeletePost, usePostAction, type AnyPost } from "./cache";
+import { useDialogs } from "../dialogs";
+import { ProfileHoverCard } from "../profiles/hover-card";
+import { useQueryClient } from "@tanstack/react-query";
+import type { EntryContext, PostDTO, UnavailableDTO } from "@/lib/types";
+
+export function postPath(p: Pick<PostDTO, "id" | "author">) {
+  return `/${p.author.handle}/status/${p.id}`;
+}
+
+const UNAVAILABLE_TEXT: Record<UnavailableDTO["unavailable"], string> = {
+  deleted: "This post was deleted by its author.",
+  protected: "This post is from an account that protects its posts. Only approved followers can see it.",
+  blocked: "This post is from an account you blocked.",
+  blocked_by: "This post is unavailable.",
+  suspended: "This post is from a suspended account.",
+  not_found: "This post is unavailable.",
+  muted: "This post is from an account you muted.",
+};
+
+export function UnavailablePost({ reason, compact }: { reason: UnavailableDTO["unavailable"]; compact?: boolean }) {
+  return (
+    <div className={clsx("rounded-card bg-subtle px-4 py-3 text-fg2", !compact && "mx-4 my-3")} role="note">
+      {UNAVAILABLE_TEXT[reason]}
+    </div>
+  );
+}
+
+function ContextRow({ context }: { context: EntryContext }) {
+  let icon: ReactNode = null;
+  let text: ReactNode = null;
+  if (context.type === "repost") {
+    icon = <Repeat2 size={16} />;
+    text = (
+      <Link href={`/${context.by.handle}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>
+        {context.by.displayName} Reposted
+      </Link>
+    );
+  } else if (context.type === "pinned") {
+    icon = <Pin size={14} />;
+    text = "Pinned Post";
+  } else if (context.type === "topic") {
+    icon = <Hash size={14} />;
+    text = (
+      <Link href={`/i/topics/${context.topic.slug}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>
+        {context.topic.name}
+      </Link>
+    );
+  } else if (context.type === "liked") {
+    icon = <Heart size={14} fill="currentColor" />;
+    text = (
+      <Link href={`/${context.by.handle}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>
+        {context.by.displayName} liked
+      </Link>
+    );
+  } else if (context.type === "follows_reply") {
+    icon = <MessageCircle size={14} />;
+    text = `${context.by.displayName} replied`;
+  }
+  return (
+    <div className="-mb-1 flex items-center gap-3 pt-2 text-xs font-bold text-fg2">
+      <div className="flex w-12 shrink-0 justify-end">{icon}</div>
+      <div className="min-w-0 truncate">{text}</div>
+    </div>
+  );
+}
+
+function useOpenPost(p: PostDTO) {
+  const router = useRouter();
+  return (e: MouseEvent | KeyboardEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest("a,button,video,input,textarea,[role=menuitem],[role=dialog],label")) return;
+    if (window.getSelection()?.toString()) return;
+    const href = postPath(p);
+    if ("metaKey" in e && (e.metaKey || e.ctrlKey)) window.open(href, "_blank", "noopener");
+    else router.push(href);
+  };
+}
+
+export const PostCard = memo(function PostCard({
+  postId,
+  context,
+  connectTop,
+  connectBottom,
+  initial,
+  showReplyingTo = true,
+}: {
+  postId: string;
+  context?: EntryContext;
+  connectTop?: boolean;
+  connectBottom?: boolean;
+  initial?: AnyPost;
+  showReplyingTo?: boolean;
+}) {
+  const { data } = usePost(postId, initial);
+  if (!data) return null;
+  if (!isPost(data)) return data.unavailable === "deleted" && !connectTop && !connectBottom ? null : <UnavailablePost reason={data.unavailable} />;
+  return <PostCardBody p={data} context={context} connectTop={connectTop} connectBottom={connectBottom} showReplyingTo={showReplyingTo} />;
+});
+
+function PostCardBody({ p, context, connectTop, connectBottom, showReplyingTo }: { p: PostDTO; context?: EntryContext; connectTop?: boolean; connectBottom?: boolean; showReplyingTo: boolean }) {
+  const open = useOpenPost(p);
+  const [showHidden, setShowHidden] = useState(false);
+  if (p.viewer.authorMuted && !showHidden && context?.type !== "pinned") {
+    // Muted authors collapse in conversations; they're already filtered from feeds.
+    return (
+      <div className="border-b border-line px-4 py-3 text-fg2">
+        This post is from an account you muted.{" "}
+        <button type="button" className="text-accent-text hover:underline" onClick={() => setShowHidden(true)}>
+          View
+        </button>
+      </div>
+    );
+  }
+  return (
+    <article
+      data-post-id={p.id}
+      tabIndex={0}
+      aria-label={`Post by ${p.author.displayName}`}
+      onClick={open}
+      onKeyDown={(e) => e.key === "Enter" && e.target === e.currentTarget && open(e)}
+      className={clsx("post-card cursor-pointer px-4 outline-none transition-colors duration-150 hover:bg-hover focus-visible:bg-hover", !connectBottom && "border-b border-line")}
+    >
+      {context && <ContextRow context={context} />}
+      <div className="flex gap-3">
+        <div className="relative flex w-12 shrink-0 flex-col items-center">
+          {connectTop ? <div className="h-3 w-0.5 bg-line-strong" aria-hidden="true" /> : <div className="h-3" />}
+          <ProfileHoverCard handle={p.author.handle}>
+            <Link href={`/${p.author.handle}`} onClick={(e) => e.stopPropagation()} aria-label={`${p.author.displayName} profile`}>
+              <Avatar user={p.author} size={48} />
+            </Link>
+          </ProfileHoverCard>
+          {connectBottom && <div className="mt-1 w-0.5 flex-1 bg-line-strong" aria-hidden="true" />}
+        </div>
+        <div className="min-w-0 flex-1 pb-3 pt-3">
+          <PostHeader p={p} />
+          {showReplyingTo && p.replyingTo.length > 0 && (
+            <div className="text-fg2">
+              Replying to{" "}
+              {p.replyingTo.map((h, i) => (
+                <span key={h}>
+                  {i > 0 && " "}
+                  <Link href={`/${h}`} className="text-accent-text hover:underline" onClick={(e) => e.stopPropagation()}>
+                    @{h}
+                  </Link>
+                </span>
+              ))}
+            </div>
+          )}
+          {p.text && <RichText text={p.text} lang={p.lang} className="text-post" />}
+          <PostAttachments p={p} />
+          <PostActions p={p} />
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function PostHeader({ p }: { p: PostDTO }) {
+  return (
+    <div className="flex items-start gap-1">
+      <div className="flex min-w-0 flex-1 items-baseline gap-x-1 overflow-hidden whitespace-nowrap leading-5">
+        <ProfileHoverCard handle={p.author.handle}>
+          <Link href={`/${p.author.handle}`} className="flex min-w-0 shrink hover:underline" onClick={(e) => e.stopPropagation()}>
+            <DisplayName user={p.author} />
+          </Link>
+        </ProfileHoverCard>
+        <span className="min-w-0 shrink-[2] truncate text-fg2">@{p.author.handle}</span>
+        <span className="shrink-0 text-fg2" aria-hidden="true">·</span>
+        <Link href={postPath(p)} className="shrink-0 text-fg2 hover:underline" title={absoluteTitle(p.createdAt)} onClick={(e) => e.stopPropagation()}>
+          <time dateTime={p.createdAt}>{relativeTime(p.createdAt)}</time>
+        </Link>
+      </div>
+      <PostMenu p={p} />
+    </div>
+  );
+}
+
+export function PostAttachments({ p, large }: { p: PostDTO; large?: boolean }) {
+  return (
+    <>
+      {p.media.length > 0 &&
+        (large && p.media[0].kind === "VIDEO" ? (
+          <div className="mt-3">
+            <VideoPlayer media={p.media[0]} large />
+          </div>
+        ) : (
+          <MediaGrid media={p.media} sensitive={p.sensitive} href={(i) => `${postPath(p)}/${p.media[0].kind === "VIDEO" ? "video" : "photo"}/${i}`} />
+        ))}
+      {p.poll && <PollView p={p} />}
+      {p.quoted && <QuotedPost quoted={p.quoted} />}
+    </>
+  );
+}
+
+// ------------------------------------------------------------------------- poll
+function PollView({ p }: { p: PostDTO }) {
+  const vote = useVote();
+  const poll = p.poll!;
+  const showResults = !poll.canVote || vote.isPending;
+  const max = Math.max(...poll.options.map((o) => o.votes));
+  return (
+    <div className="mt-3" onClick={(e) => e.stopPropagation()}>
+      <div className="space-y-2" role="group" aria-label="Poll">
+        {poll.options.map((o) => {
+          const pct = poll.totalVotes ? Math.round((o.votes / poll.totalVotes) * 100) : 0;
+          if (!showResults)
+            return (
+              <button
+                key={o.id}
+                type="button"
+                disabled={vote.isPending}
+                onClick={() => vote.mutate({ id: p.id, optionId: o.id })}
+                className="flex min-h-[34px] w-full items-center justify-center rounded-full border border-accent px-4 font-bold text-accent-text hover:bg-accent-soft"
+              >
+                {o.label}
+              </button>
+            );
+          const mine = poll.viewerVoteOptionId === o.id;
+          return (
+            <div key={o.id} className="relative flex min-h-[32px] items-center justify-between overflow-hidden rounded-md px-3" aria-label={`${o.label}: ${pct}%${mine ? " (your vote)" : ""}`}>
+              <div className={clsx("absolute inset-y-0 left-0 rounded-md", o.votes === max && max > 0 ? "bg-accent-soft" : "bg-hover-strong")} style={{ width: `${Math.max(pct, 1)}%` }} />
+              <span className={clsx("relative break-anywhere", o.votes === max && max > 0 && "font-bold")}>
+                {o.label} {mine && "✓"}
+              </span>
+              <span className={clsx("relative ml-3", o.votes === max && max > 0 && "font-bold")}>{pct}%</span>
+            </div>
+          );
+        })}
+      </div>
+      <p className="mt-2 text-fg2">
+        {compactCount(poll.totalVotes)} vote{poll.totalVotes === 1 ? "" : "s"} · {pollTimeLeft(poll.endsAt)}
+        {p.viewer.isAuthor && !poll.closed && " · You can’t vote in your own poll"}
+      </p>
+    </div>
+  );
+}
+
+// ----------------------------------------------------------------------- quoted
+export function QuotedPost({ quoted }: { quoted: PostDTO | UnavailableDTO }) {
+  const router = useRouter();
+  if (!isPost(quoted)) return <div className="mt-3"><UnavailablePost reason={quoted.unavailable} compact /></div>;
+  const href = postPath(quoted);
+  return (
+    <div
+      role="link"
+      tabIndex={0}
+      aria-label={`Quoted post by ${quoted.author.displayName}`}
+      onClick={(e) => {
+        e.stopPropagation();
+        if ((e.target as HTMLElement).closest("a,button,video")) return;
+        router.push(href);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.stopPropagation();
+          router.push(href);
+        }
+      }}
+      className="mt-3 cursor-pointer overflow-hidden rounded-card border border-line-strong transition-colors hover:bg-hover"
+    >
+      <div className="px-3 pt-2.5">
+        <div className="flex min-w-0 items-center gap-1">
+          <Avatar user={quoted.author} size={20} />
+          <DisplayName user={quoted.author} className="ml-1" />
+          <span className="truncate text-fg2">@{quoted.author.handle}</span>
+          <span className="text-fg2">·</span>
+          <span className="shrink-0 text-fg2">{relativeTime(quoted.createdAt)}</span>
+        </div>
+        {quoted.replyingTo.length > 0 && <div className="text-fg2">Replying to @{quoted.replyingTo[0]}</div>}
+        {quoted.text && <RichText text={quoted.text} lang={quoted.lang} className="pb-2.5 text-post" />}
+      </div>
+      {quoted.media.length > 0 && (
+        <div className="[&>div]:mt-0 [&>div]:rounded-none [&>div]:border-0 [&>div]:border-t">
+          <MediaGrid media={quoted.media} sensitive={quoted.sensitive} href={(i) => `${href}/${quoted.media[0].kind === "VIDEO" ? "video" : "photo"}/${i}`} />
+        </div>
+      )}
+      {quoted.poll && <div className="px-3 pb-2.5 text-fg2">Poll · {quoted.poll.totalVotes} votes</div>}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------- actions
+function ActionButton({ label, count, icon, onClick, tone, active, disabled, title, children }: { label: string; count?: number; icon: ReactNode; onClick?: () => void; tone: "accent" | "repost" | "like"; active?: boolean; disabled?: boolean; title?: string; children?: ReactNode }) {
+  const hover = tone === "accent" ? "group-hover:bg-accent-soft group-hover:text-accent-text" : tone === "repost" ? "group-hover:bg-repost-soft group-hover:text-repost" : "group-hover:bg-like-soft group-hover:text-like";
+  const textHover = tone === "accent" ? "group-hover:text-accent-text" : tone === "repost" ? "group-hover:text-repost" : "group-hover:text-like";
+  const activeCls = active ? (tone === "repost" ? "text-repost" : tone === "like" ? "text-like" : "text-accent-text") : "text-fg2";
+  const content = (
+    <>
+      <span className={clsx("-m-2 grid h-[34.75px] w-[34.75px] place-items-center rounded-full transition-colors", !disabled && hover)}>{icon}</span>
+      {count !== undefined && <span className={clsx("min-w-[1ch] px-3 text-xs tabular-nums", !disabled && textHover)}>{count > 0 ? compactCount(count) : ""}</span>}
+    </>
+  );
+  if (children) return children;
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      aria-pressed={active}
+      title={title ?? label}
+      disabled={disabled}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick?.();
+      }}
+      className={clsx("group flex min-h-[32px] items-center disabled:opacity-50", activeCls)}
+    >
+      {content}
+    </button>
+  );
+}
+
+export function PostActions({ p, large }: { p: PostDTO; large?: boolean }) {
+  const router = useRouter();
+  const like = useToggle("like");
+  const repost = useToggle("repost");
+  const bookmark = useToggle("bookmark");
+  const dialogs = useDialogs();
+  const toast = useToast();
+  const size = large ? 22.5 : 18.75;
+  const [pop, setPop] = useState(false);
+  const repostDisabled = p.author.isProtected;
+  const copy = async () => {
+    const url = `${window.location.origin}${postPath(p)}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast({ text: "Copied to clipboard" });
+    } catch {
+      toast({ text: "Couldn’t copy the link. Your browser blocked clipboard access.", tone: "error" });
+    }
+  };
+  return (
+    <div className={clsx("flex items-center", large ? "justify-around border-t border-line py-1" : "mt-3 max-w-[425px] justify-between")} role="group" aria-label="Post actions">
+      <ActionButton
+        label={p.viewer.canReply ? `Reply${p.counts.replies ? `, ${p.counts.replies} replies` : ""}` : p.viewer.replyRestriction ?? "Replies are limited"}
+        title={p.viewer.canReply ? "Reply" : p.viewer.replyRestriction ?? "Replies are limited"}
+        count={large ? undefined : p.counts.replies}
+        tone="accent"
+        disabled={!p.viewer.canReply}
+        icon={<MessageCircle size={size} />}
+        onClick={() => router.push(`/compose/post?reply=${p.id}`)}
+      />
+      <Menu
+        label={p.viewer.reposted ? "Undo repost" : "Repost"}
+        align="center"
+        trigger={
+          <button
+            type="button"
+            aria-label={repostDisabled ? "Posts from protected accounts can’t be reposted" : `${p.viewer.reposted ? "Undo repost" : "Repost"}${p.counts.reposts + p.counts.quotes ? `, ${p.counts.reposts + p.counts.quotes} reposts` : ""}`}
+            title={repostDisabled ? "Posts from protected accounts can’t be reposted" : "Repost"}
+            disabled={repostDisabled && !p.viewer.isAuthor}
+            onClick={(e) => e.stopPropagation()}
+            className={clsx("group flex min-h-[32px] items-center disabled:opacity-50", p.viewer.reposted ? "text-repost" : "text-fg2")}
+          >
+            <span className="-m-2 grid h-[34.75px] w-[34.75px] place-items-center rounded-full transition-colors group-enabled:group-hover:bg-repost-soft group-enabled:group-hover:text-repost">
+              {repostDisabled ? <Lock size={size - 2} /> : <Repeat2 size={size} />}
+            </span>
+            {!large && <span className="min-w-[1ch] px-3 text-xs tabular-nums group-enabled:group-hover:text-repost">{p.counts.reposts + p.counts.quotes > 0 ? compactCount(p.counts.reposts + p.counts.quotes) : ""}</span>}
+          </button>
+        }
+      >
+        {repostDisabled ? (
+          <MenuItem icon={<Lock />} disabled>
+            Protected posts can’t be reposted
+          </MenuItem>
+        ) : (
+          <MenuItem icon={<Repeat2 />} onSelect={() => repost.mutate({ id: p.id, on: !p.viewer.reposted })}>
+            {p.viewer.reposted ? "Undo Repost" : "Repost"}
+          </MenuItem>
+        )}
+        <MenuItem icon={<Pencil />} onSelect={() => router.push(`/compose/post?quote=${p.id}`)}>
+          Quote Post
+        </MenuItem>
+      </Menu>
+      <ActionButton
+        label={`${p.viewer.liked ? "Unlike" : "Like"}${p.counts.likes ? `, ${p.counts.likes} likes` : ""}`}
+        title={p.viewer.liked ? "Unlike" : "Like"}
+        count={large ? undefined : p.counts.likes}
+        tone="like"
+        active={p.viewer.liked}
+        icon={<Heart size={size} fill={p.viewer.liked ? "currentColor" : "none"} className={pop ? "like-pop" : undefined} onAnimationEnd={() => setPop(false)} />}
+        onClick={() => {
+          if (!p.viewer.liked) setPop(true);
+          like.mutate({ id: p.id, on: !p.viewer.liked });
+        }}
+      />
+      <Menu
+        label="Share"
+        trigger={
+          <button type="button" aria-label="Share post" title="Share" onClick={(e) => e.stopPropagation()} className={clsx("group flex min-h-[32px] items-center", p.viewer.bookmarked ? "text-accent-text" : "text-fg2")}>
+            <span className="-m-2 grid h-[34.75px] w-[34.75px] place-items-center rounded-full transition-colors group-hover:bg-accent-soft group-hover:text-accent-text">
+              <Upload size={size} />
+            </span>
+            {!large && <span className="px-3" />}
+          </button>
+        }
+      >
+        <MenuItem icon={<Mail />} onSelect={() => dialogs.shareByMessage(p.id)}>
+          Send via Direct Message
+        </MenuItem>
+        <MenuItem icon={p.viewer.bookmarked ? <BookmarkMinus /> : <Bookmark />} onSelect={() => bookmark.mutate({ id: p.id, on: !p.viewer.bookmarked })}>
+          {p.viewer.bookmarked ? "Remove Post from Bookmarks" : "Add Post to Bookmarks"}
+        </MenuItem>
+        <MenuItem icon={<Link2 />} onSelect={copy}>
+          Copy link to Post
+        </MenuItem>
+        {typeof navigator !== "undefined" && "share" in navigator && (
+          <MenuItem
+            icon={<Share2 />}
+            onSelect={() => {
+              navigator.share({ url: `${window.location.origin}${postPath(p)}`, text: `Post by @${p.author.handle}` }).catch(() => {});
+            }}
+          >
+            Share Post via…
+          </MenuItem>
+        )}
+      </Menu>
+      {large && p.viewer.isAuthor && (
+        <button type="button" aria-label="View post activity" title="View post activity" onClick={(e) => { e.stopPropagation(); dialogs.activity(p.id); }} className="group flex min-h-[32px] items-center text-fg2">
+          <span className="-m-2 grid h-[34.75px] w-[34.75px] place-items-center rounded-full group-hover:bg-accent-soft group-hover:text-accent-text">
+            <BarChart3 size={size} />
+          </span>
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------------- menu
+export function PostMenu({ p }: { p: PostDTO }) {
+  const session = useSession();
+  const dialogs = useDialogs();
+  const qc = useQueryClient();
+  const toast = useToast();
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmBlock, setConfirmBlock] = useState(false);
+  const deletePost = useDeletePost();
+  const pinned = p.pinned;
+  const pin = usePostAction(
+    async (on: boolean) => {
+      if (on) await put(`/posts/${p.id}/pin`);
+      else await del(`/posts/${p.id}/pin`);
+      return { ...p, pinned: on };
+    },
+    (_x, on) => {
+      qc.invalidateQueries({ queryKey: ["profile-timeline", p.author.handle] });
+      qc.invalidateQueries({ queryKey: ["profile", p.author.handle] });
+      toast({ text: on ? "Your post was pinned to your profile." : "Your post was unpinned from your profile." });
+    },
+  );
+  const hide = usePostAction(
+    (on: boolean) => (on ? put<PostDTO>(`/posts/${p.id}/hide`) : del<PostDTO>(`/posts/${p.id}/hide`)),
+    (_x, on) => {
+      qc.invalidateQueries({ queryKey: ["detail"] });
+      toast({ text: on ? "You hid a reply. People can still see it in the hidden replies view." : "Reply unhidden." });
+    },
+  );
+  const muteConv = usePostAction(
+    (on: boolean) => (on ? put<PostDTO>(`/posts/${p.id}/mute-conversation`) : del<PostDTO>(`/posts/${p.id}/mute-conversation`)),
+    (_x, on) => toast({ text: on ? "You won’t get notifications from this conversation." : "Conversation unmuted." }),
+  );
+  const relationship = async (path: string, method: "PUT" | "DELETE", msg: string) => {
+    try {
+      if (method === "PUT") await put(path);
+      else await del(path);
+      qc.invalidateQueries();
+      toast({ text: msg });
+    } catch (e) {
+      toast({ text: errorMessage(e), tone: "error" });
+    }
+  };
+  const me = p.viewer.isAuthor;
+  const h = p.author.handle;
+  return (
+    <>
+      <Menu
+        label="More"
+        trigger={
+          <button type="button" aria-label="More" title="More" onClick={(e) => e.stopPropagation()} className="-mr-2 -mt-1 grid h-[34.75px] w-[34.75px] shrink-0 place-items-center rounded-full text-fg2 hover:bg-accent-soft hover:text-accent-text">
+            <MoreHorizontal size={18.75} />
+          </button>
+        }
+      >
+        {me ? (
+          <>
+            <MenuItem danger icon={<Trash2 />} onSelect={() => setConfirmDelete(true)}>
+              Delete
+            </MenuItem>
+            <MenuItem icon={<Pin />} onSelect={() => pin.mutate(!pinned)}>
+              {pinned ? "Unpin from profile" : "Pin to your profile"}
+            </MenuItem>
+            <MenuItem icon={p.viewer.conversationMuted ? <Bell /> : <BellOff />} onSelect={() => muteConv.mutate(!p.viewer.conversationMuted)}>
+              {p.viewer.conversationMuted ? "Unmute this conversation" : "Mute this conversation"}
+            </MenuItem>
+            <MenuItem icon={<BarChart3 />} onSelect={() => dialogs.activity(p.id)}>
+              View Post activity
+            </MenuItem>
+          </>
+        ) : (
+          <>
+            {p.viewer.canHide && (
+              <MenuItem icon={p.hidden ? <Eye /> : <EyeOff />} onSelect={() => hide.mutate(!p.hidden)}>
+                {p.hidden ? "Unhide reply" : "Hide reply"}
+              </MenuItem>
+            )}
+            {p.viewer.authorFollowed ? (
+              <MenuItem icon={<UserMinus />} onSelect={() => relationship(`/users/${h}/follow`, "DELETE", `You unfollowed @${h}`)}>
+                Unfollow @{h}
+              </MenuItem>
+            ) : (
+              <MenuItem icon={<UserPlus />} onSelect={() => relationship(`/users/${h}/follow`, "PUT", p.author.isProtected ? `Follow request sent to @${h}` : `You followed @${h}`)}>
+                Follow @{h}
+              </MenuItem>
+            )}
+            <MenuItem icon={<ListPlus />} onSelect={() => dialogs.listMembership(h)}>
+              Add/remove @{h} from Lists
+            </MenuItem>
+            <MenuItem icon={p.viewer.conversationMuted ? <Bell /> : <BellOff />} onSelect={() => muteConv.mutate(!p.viewer.conversationMuted)}>
+              {p.viewer.conversationMuted ? "Unmute this conversation" : "Mute this conversation"}
+            </MenuItem>
+            <MenuItem icon={<VolumeX />} onSelect={() => relationship(`/users/${h}/mute`, p.viewer.authorMuted ? "DELETE" : "PUT", p.viewer.authorMuted ? `@${h} has been unmuted.` : `@${h} has been muted. You won’t see their posts in your timeline.`)}>
+              {p.viewer.authorMuted ? `Unmute @${h}` : `Mute @${h}`}
+            </MenuItem>
+            <MenuItem icon={<Ban />} onSelect={() => setConfirmBlock(true)}>
+              Block @{h}
+            </MenuItem>
+            <MenuItem icon={<Flag />} onSelect={() => dialogs.report({ type: "POST", id: p.id, label: `post by @${h}` })}>
+              Report Post
+            </MenuItem>
+          </>
+        )}
+      </Menu>
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title="Delete Post?"
+        body="This can’t be undone and it will be removed from your profile, the timeline of any accounts that follow you, and from search results."
+        confirmLabel="Delete"
+        danger
+        busy={deletePost.isPending}
+        onConfirm={() => deletePost.mutate(p.id, { onSettled: () => setConfirmDelete(false) })}
+      />
+      <ConfirmDialog
+        open={confirmBlock}
+        onOpenChange={setConfirmBlock}
+        title={`Block @${h}?`}
+        body={`They will not be able to follow you or view your posts, and you will not see posts or notifications from @${h}.`}
+        confirmLabel="Block"
+        danger
+        onConfirm={() => {
+          setConfirmBlock(false);
+          relationship(`/users/${h}/block`, "PUT", `You blocked @${h}`);
+        }}
+      />
+      {session.actor.id === "" && null}
+    </>
+  );
+}
+
+/** Focal post on the detail page: larger text, full timestamp, engagement links. */
+export function FocalPost({ p }: { p: PostDTO }) {
+  const replyAudienceNote =
+    p.replyAudience === "FOLLOWING" ? `People @${p.author.handle} follows or mentioned can reply` : p.replyAudience === "MENTIONED" ? `People @${p.author.handle} mentioned can reply` : null;
+  return (
+    <article data-post-id={p.id} aria-label={`Post by ${p.author.displayName}`} className="border-b border-line px-4 pt-3">
+      <div className="flex items-start gap-3">
+        <ProfileHoverCard handle={p.author.handle}>
+          <Link href={`/${p.author.handle}`} aria-label={`${p.author.displayName} profile`}>
+            <Avatar user={p.author} size={48} />
+          </Link>
+        </ProfileHoverCard>
+        <div className="min-w-0 flex-1">
+          <Link href={`/${p.author.handle}`} className="block hover:underline">
+            <DisplayName user={p.author} />
+          </Link>
+          <div className="truncate text-fg2">@{p.author.handle}</div>
+        </div>
+        <PostMenu p={p} />
+      </div>
+      {p.replyingTo.length > 0 && (
+        <div className="mt-2 text-fg2">
+          Replying to{" "}
+          {p.replyingTo.map((h) => (
+            <Link key={h} href={`/${h}`} className="mr-1 text-accent-text hover:underline">
+              @{h}
+            </Link>
+          ))}
+        </div>
+      )}
+      {p.text && <RichText text={p.text} lang={p.lang} className="mt-3 text-detail" />}
+      <PostAttachments p={p} large />
+      <div className="my-4 text-fg2">
+        <Link href={`/${p.author.handle}/status/${p.id}`} className="hover:underline">
+          <time dateTime={p.createdAt}>{fullTime(p.createdAt)}</time>
+        </Link>{" "}
+        · iSchoolie Web App
+      </div>
+      {replyAudienceNote && <div className="-mt-2 mb-3 flex items-center gap-1 text-sm text-fg2"><MessageCircle size={14} /> {replyAudienceNote}</div>}
+      {(p.counts.reposts > 0 || p.counts.quotes > 0 || p.counts.likes > 0) && (
+        <div className="flex flex-wrap gap-x-5 gap-y-1 border-t border-line py-4">
+          {p.counts.reposts > 0 && (
+            <Link href={`/${p.author.handle}/status/${p.id}/reposts`} className="hover:underline">
+              <b>{compactCount(p.counts.reposts)}</b> <span className="text-fg2">Repost{p.counts.reposts === 1 ? "" : "s"}</span>
+            </Link>
+          )}
+          {p.counts.quotes > 0 && (
+            <Link href={`/${p.author.handle}/status/${p.id}/quotes`} className="hover:underline">
+              <b>{compactCount(p.counts.quotes)}</b> <span className="text-fg2">Quote Post{p.counts.quotes === 1 ? "" : "s"}</span>
+            </Link>
+          )}
+          {p.counts.likes > 0 && (
+            <Link href={`/${p.author.handle}/status/${p.id}/likes`} className="hover:underline">
+              <b>{compactCount(p.counts.likes)}</b> <span className="text-fg2">Like{p.counts.likes === 1 ? "" : "s"}</span>
+            </Link>
+          )}
+        </div>
+      )}
+      <PostActions p={p} large />
+    </article>
+  );
+}
