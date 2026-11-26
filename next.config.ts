@@ -9,6 +9,9 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Lets a second dev server (e.g. APP_MODE=live on another port) run beside the default one.
+  // Only set when asked for, so the default server's config is unchanged.
+  ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
   devIndicators: false,
   experimental: {
     // Next's dev MCP endpoint appends forwarded browser console output to

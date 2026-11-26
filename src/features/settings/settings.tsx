@@ -5,7 +5,7 @@ import { useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
 import { ChevronRight, Check, Trash2, FlaskConical, RotateCcw, Lock, KeyRound, Mail, Smartphone, Plug, UserX } from "lucide-react";
-import { PageHeader } from "@/components/layout/app-shell";
+import { PageHeader, signOut } from "@/components/layout/app-shell";
 import { Avatar, Checkbox, DisplayName, EmptyState, ErrorState, Switch, TextField } from "@/components/ui/misc";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogBody } from "@/components/ui/dialog";
@@ -151,7 +151,10 @@ export function AccountSettings() {
         </div>
         <p className="px-4 pb-3 text-sm text-fg2">Protected posts and messaging permissions are under <Link href="/settings/privacy_and_safety" className="text-accent-text">Privacy and safety</Link>.</p>
       </Section>
-      <Section title="Sign-in and security" desc="This demo has no sign-in. These account controls are part of the future authentication phase and aren’t operational here.">
+      {s.mode === "live" ? (
+        <LiveSecurity />
+      ) : (
+      <Section title="Sign-in and security" desc="This demo has no sign-in. Sign-in is available when the server runs in live mode with Supabase Auth.">
         <ul>
           {unavailable.map((u) => (
             <li key={u.label} className="flex items-center gap-3 px-4 py-3 text-fg2">
@@ -160,7 +163,63 @@ export function AccountSettings() {
           ))}
         </ul>
       </Section>
+      )}
     </div>
+  );
+}
+
+const PROVIDER_LABEL: Record<string, string> = { email: "Email and password", google: "Google", github: "GitHub" };
+
+/** Live mode: the Supabase account behind this profile. */
+function LiveSecurity() {
+  const s = useSession();
+  const toast = useToast();
+  const [pw, setPw] = useState("");
+  const [pw2, setPw2] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [pwError, setPwError] = useState<string | null>(null);
+  const providers = s.account?.providers ?? [];
+  const changePassword = async () => {
+    setPwError(null);
+    if (pw.length < 8) return setPwError("Your password needs to be at least 8 characters.");
+    if (pw !== pw2) return setPwError("Passwords do not match.");
+    setBusy(true);
+    const { supabaseBrowser } = await import("@/lib/supabase/browser");
+    const { error } = await supabaseBrowser().auth.updateUser({ password: pw });
+    setBusy(false);
+    if (error) return setPwError(/reauthentication|recent/i.test(error.message) ? "For security, log out and back in, then try again." : error.message);
+    setPw("");
+    setPw2("");
+    toast({ text: "Password updated" });
+  };
+  return (
+    <Section title="Sign-in and security">
+      <div className="flex items-center gap-3 px-4 py-3">
+        <Mail size={18} className="text-fg2" />
+        <div className="min-w-0 flex-1">
+          <div>Email</div>
+          <div className="truncate text-sm text-fg2" data-testid="account-email">{s.account?.email ?? "No email on this account"}</div>
+        </div>
+      </div>
+      <div className="flex items-start gap-3 px-4 py-3">
+        <Plug size={18} className="mt-0.5 text-fg2" />
+        <div className="min-w-0 flex-1">
+          <div>Sign-in methods</div>
+          <div className="text-sm text-fg2">{providers.length ? providers.map((p) => PROVIDER_LABEL[p] ?? p).join(", ") : "—"}</div>
+        </div>
+      </div>
+      <div className="px-0 pt-2">
+        <h3 className="flex items-center gap-2 px-4 font-bold"><KeyRound size={18} /> {providers.includes("email") ? "Change your password" : "Set a password"}</h3>
+        <TextField label="New password" type="password" autoComplete="new-password" value={pw} onChange={setPw} countMode="none" />
+        <TextField label="Confirm password" type="password" autoComplete="new-password" value={pw2} onChange={setPw2} countMode="none" error={pwError} />
+        <div className="flex justify-end px-4 pb-3">
+          <Button size="sm" disabled={busy || !pw} onClick={changePassword}>{busy ? "Saving…" : "Save password"}</Button>
+        </div>
+      </div>
+      <div className="border-t border-line px-4 py-3">
+        <Button variant="danger-outline" size="sm" onClick={signOut}>Log out</Button>
+      </div>
+    </Section>
   );
 }
 

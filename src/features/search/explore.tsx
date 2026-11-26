@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useIsGuest } from "@/components/providers";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -102,7 +103,8 @@ export function SearchView() {
   const toast = useToast();
   const q = sp.get("q") ?? "";
   const f = (sp.get("f") ?? "top") as (typeof SEARCH_TABS)[number]["key"];
-  const history = useQuery({ queryKey: ["search-history"], queryFn: () => get<{ saved: { query: string }[] }>("/search/history") });
+  const guest = useIsGuest();
+  const history = useQuery({ queryKey: ["search-history"], queryFn: () => get<{ saved: { query: string }[] }>("/search/history"), enabled: !guest });
   const saved = !!history.data?.saved.some((s) => s.query === q.trim());
   const save = useMutation({
     mutationFn: () => (saved ? del("/search/saved", { query: q }) : put("/search/saved", { query: q })),

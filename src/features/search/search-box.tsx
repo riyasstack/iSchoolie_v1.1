@@ -1,6 +1,7 @@
 "use client";
 /** Search field with debounced typeahead, recent and saved searches. */
 import { useEffect, useId, useRef, useState } from "react";
+import { useIsGuest } from "@/components/providers";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -33,13 +34,14 @@ export function SearchBox({ initial = "", autoFocus }: { initial?: string; autoF
   const router = useRouter();
   const qc = useQueryClient();
   const [value, setValue] = useState(initial);
+  const guest = useIsGuest();
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
   const debounced = useDebounced(value.trim(), 200);
   const listId = useId();
   const wrap = useRef<HTMLDivElement>(null);
   useEffect(() => setValue(initial), [initial]);
-  const history = useQuery({ queryKey: ["search-history"], queryFn: () => get<History>("/search/history"), enabled: open });
+  const history = useQuery({ queryKey: ["search-history"], queryFn: () => get<History>("/search/history"), enabled: open && !guest });
   const ta = useQuery({ queryKey: ["typeahead", debounced], queryFn: () => get<Typeahead>(`/search/typeahead?q=${encodeURIComponent(debounced)}`), enabled: open && debounced.length > 0, staleTime: 30_000 });
 
   type Opt = { key: string; href: string; render: React.ReactNode };

@@ -115,6 +115,7 @@ function ResetDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: 
 
 export function DemoNotice() {
   const s = useSession();
+  if (s.mode !== "demo") return null;
   const exp = s.workspace.expiresAt ? new Date(s.workspace.expiresAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : null;
   return (
     <div className="border-b border-line bg-accent-softer px-4 py-2 text-sm text-fg2" role="note">

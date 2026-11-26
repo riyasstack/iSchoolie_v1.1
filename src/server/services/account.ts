@@ -1,5 +1,7 @@
 import { prisma } from "../db";
 import type { RequestContext } from "../context";
+import { isMember } from "../viewer";
+import { supabaseConfigured } from "@/lib/supabase/config";
 import { env } from "../env";
 import { invalid, notFound } from "../errors";
 import { rateLimit } from "../ratelimit";
@@ -8,7 +10,16 @@ import { unreadNotificationCount } from "./notifications";
 import { unreadConversationCount } from "./messages";
 import type { PreferencesDTO, SessionDTO } from "@/lib/types";
 
+export const DEFAULT_PREFERENCES: PreferencesDTO = {
+  theme: "DEFAULT", accent: "brand", fontScale: 100, reducedMotion: false, autoplay: true, dataSaver: false,
+  showSensitiveMedia: false, altTextReminder: false, timelineMode: "home", notifyLikes: true, notifyReposts: true,
+  notifyReplies: true, notifyMentions: true, notifyFollows: true, notifyQuotes: true, filterNotFollowing: false,
+  filterNoAvatar: false, showReadReceipts: true, searchHideSensitive: true,
+};
+
 export async function getPreferences(ctx: RequestContext): Promise<PreferencesDTO> {
+  // Guests and onboarding viewers have no profile row: defaults, no writes.
+  if (!isMember(ctx)) return { ...DEFAULT_PREFERENCES };
   const p = await prisma.preferences.upsert({
     where: { userId: ctx.actor.id },
     create: { userId: ctx.actor.id, workspaceId: ctx.workspace.id },
@@ -47,6 +58,22 @@ export async function updatePreferences(ctx: RequestContext, patch: Partial<Pref
 }
 
 export async function getSession(ctx: RequestContext): Promise<SessionDTO> {
+  const common = {
+    mode: ctx.mode,
+    viewer: ctx.viewer ?? "member",
+    account: ctx.auth ? { email: ctx.auth.email, providers: ctx.auth.providers } : null,
+    authEnabled: ctx.mode === "live" && supabaseConfigured(),
+    workspace: { id: ctx.workspace.id, createdAt: ctx.workspace.createdAt.toISOString(), expiresAt: ctx.workspace.expiresAt?.toISOString() ?? null, retentionDays: env.retentionDays },
+    capabilities: ctx.capabilities,
+  } as const;
+  if (!isMember(ctx)) {
+    return {
+      ...common,
+      actor: { id: ctx.actor.id, handle: "", displayName: ctx.viewer === "onboarding" ? "New account" : "Guest", avatarUrl: null, isProtected: false, demoTeamBadge: false, dmPolicy: "EVERYONE" },
+      preferences: { ...DEFAULT_PREFERENCES },
+      badges: { notifications: 0, messages: 0, followRequests: 0 },
+    };
+  }
   const g = await loadViewerGraph(prisma, ctx);
   const [user, prefs, notifications, messages, followRequests] = await Promise.all([
     prisma.user.findUniqueOrThrow({ where: { id: ctx.actor.id }, select: { ...userSelect, dmPolicy: true } }),
@@ -56,16 +83,15 @@ export async function getSession(ctx: RequestContext): Promise<SessionDTO> {
     prisma.followRequest.count({ where: { workspaceId: ctx.workspace.id, targetId: ctx.actor.id } }),
   ]);
   return {
-    mode: ctx.mode,
+    ...common,
     actor: { ...toUserDTO(user), isProtected: user.isProtected, dmPolicy: user.dmPolicy },
-    workspace: { id: ctx.workspace.id, createdAt: ctx.workspace.createdAt.toISOString(), expiresAt: ctx.workspace.expiresAt?.toISOString() ?? null, retentionDays: env.retentionDays },
-    capabilities: ctx.capabilities,
     preferences: prefs,
     badges: { notifications, messages, followRequests },
   };
 }
 
 export async function badges(ctx: RequestContext) {
+  if (!isMember(ctx)) return { notifications: 0, messages: 0, followRequests: 0 };
   const g = await loadViewerGraph(prisma, ctx);
   const [notifications, messages, followRequests] = await Promise.all([
     unreadNotificationCount(ctx, g),

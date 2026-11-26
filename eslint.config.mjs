@@ -5,7 +5,7 @@ const config = [
   ...next,
   ...nextTs,
   {
-    ignores: [".next/**", "node_modules/**", "src/generated/**", ".data/**", "playwright-report/**", "test-results/**", "next-env.d.ts"],
+    ignores: [".next/**", ".next-live/**", ".next-build/**", "node_modules/**", "src/generated/**", ".data/**", "playwright-report/**", "test-results/**", "next-env.d.ts"],
   },
   {
     rules: {

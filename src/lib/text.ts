@@ -125,7 +125,7 @@ export const RESERVED_HANDLES = new Set(
     "hashtag", "intent", "share", "account", "admin", "static", "_next", "favicon.ico", "brand",
     "seed", "media", "status", "lists", "topics", "moments", "bookmarks", "connect", "offline",
     "support", "root", "ischoolie", "null", "undefined", "follower_requests", "display",
-    "keyboard_shortcuts", "robots.txt", "sitemap.xml", "manifest.webmanifest", "icon.png", "apple-icon.png",
+    "keyboard_shortcuts", "onboarding", "auth", "guest", "reset", "forgot", "robots.txt", "sitemap.xml", "manifest.webmanifest", "icon.png", "apple-icon.png",
   ].map((s) => s.toLowerCase()),
 );
 

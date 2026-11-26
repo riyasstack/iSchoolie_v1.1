@@ -18,6 +18,8 @@ import * as K from "./services/compose";
 import * as Media from "./services/media";
 import * as Q from "./services/search";
 import * as A from "./services/account";
+import { createMemberProfile, handleAvailable } from "./auth";
+import { isMember } from "./viewer";
 import {
   createPostSchema, draftSchema, scheduleSchema, profileSchema, listSchema, momentSchema, messageSchema, altSchema,
   mutedWordSchema, reportSchema, preferencesSchema, accountSchema, idSchema, composeSchema,
@@ -110,6 +112,32 @@ export const routes: RouteDef[] = [
       await json(z.object({ confirm: z.literal("RESET") }));
       await S.resetWorkspace(ctx.sessionHash, ctx.workspace.id);
       return { ok: true };
+    },
+  },
+  // ------------------------------------------------------------------ live onboarding
+  {
+    method: "GET",
+    pattern: "/onboarding",
+    onboarding: true,
+    handler: async ({ ctx }) => {
+      if (ctx.viewer !== "onboarding" || !ctx.auth) throw new AppError("CONFLICT", "Your profile is already set up.");
+      return { email: ctx.auth.email, providers: ctx.auth.providers, suggestion: ctx.auth.suggestion ?? { displayName: "", handle: "" } };
+    },
+  },
+  {
+    method: "GET",
+    pattern: "/onboarding/handle",
+    onboarding: true,
+    handler: ({ query }) => handleAvailable(query(z.object({ handle: z.string().max(30).default("") })).handle),
+  },
+  {
+    method: "POST",
+    pattern: "/onboarding",
+    onboarding: true,
+    handler: async ({ ctx, json }) => {
+      if (ctx.viewer !== "onboarding" || !ctx.auth) throw new AppError("CONFLICT", "Your profile is already set up.");
+      const body = await json(z.object({ handle: z.string().min(1).max(30), displayName: z.string().max(100) }));
+      return createMemberProfile({ sub: ctx.auth.subject, email: ctx.auth.email ?? undefined }, body);
     },
   },
   // ------------------------------------------------------------------ timelines
@@ -214,7 +242,7 @@ export const routes: RouteDef[] = [
     pattern: "/search",
     handler: async ({ ctx, query }) => {
       const q = query(cursorQ.extend({ q: z.string().max(500).default(""), f: z.enum(["top", "live", "user", "image", "video"]).default("top") }));
-      if (!q.cursor && q.q.trim()) await Q.recordRecentSearch(ctx, q.q);
+      if (!q.cursor && q.q.trim() && isMember(ctx)) await Q.recordRecentSearch(ctx, q.q);
       if (q.f === "user") return Q.searchPeople(ctx, q.q, q.cursor);
       return Q.searchPosts(ctx, q.q, q.f, q.cursor);
     },
@@ -324,3 +352,22 @@ export const routes: RouteDef[] = [
   // ------------------------------------------------------------------ reports
   { method: "POST", pattern: "/reports", handler: async ({ ctx, json }) => A.createReport(ctx, await json(reportSchema)) },
 ];
+
+/**
+ * Live-mode read-only guest access: browse and search public content only. Everything
+ * else (all writes, DMs, notifications, bookmarks, settings, drafts, uploads) answers
+ * SIGN_UP_REQUIRED. Private accounts and their posts stay hidden by the same visibility
+ * rules that apply to any non-follower.
+ */
+export const GUEST_READ_ROUTES = new Set([
+  "GET /session", "GET /session/badges",
+  "GET /timeline/home", "GET /timeline/latest", "GET /timeline/new",
+  "GET /posts/:id", "GET /posts/:id/detail", "GET /posts/:id/likes", "GET /posts/:id/reposts", "GET /posts/:id/quotes",
+  "GET /users/:handle", "GET /users/:handle/timeline", "GET /users/:handle/followers", "GET /users/:handle/following",
+  "GET /users/:handle/lists", "GET /users/:handle/memberships", "GET /suggestions",
+  "GET /search", "GET /search/typeahead", "GET /explore/trends",
+  "GET /lists/:id", "GET /lists/:id/timeline", "GET /lists/:id/members", "GET /lists/:id/followers",
+  "GET /topics", "GET /topics/:slug", "GET /topics/:slug/timeline",
+  "GET /moments", "GET /moments/:id", "GET /media/:id", "GET /gifs/:file", "GET /me/preferences",
+]);
+for (const r of routes) if (GUEST_READ_ROUTES.has(r.method + " " + r.pattern)) r.guest = true;

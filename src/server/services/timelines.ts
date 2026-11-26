@@ -17,6 +17,7 @@
  */
 import { prisma } from "../db";
 import type { RequestContext } from "../context";
+import { isMember } from "../viewer";
 import { filteredFromFeeds, postAccess, canViewProfileContent, type ViewerGraph } from "../policy";
 import { loadViewerGraph, toUserDTO, userSelect } from "./graph";
 import { serializePosts, isPost } from "./serialize";
@@ -59,7 +60,7 @@ const postAuthorInclude = { author: { select: userSelect } } as const;
 async function chronoCandidates(
   ctx: RequestContext,
   g: ViewerGraph,
-  opts: { authors: string[]; repostersOf?: string[]; includeReplies: "none" | "among" | "all" | "self"; before: Date | null; take: number; mediaOnly?: boolean; applyFeedFilters: boolean },
+  opts: { authors: string[] | null; repostersOf?: string[]; includeReplies: "none" | "among" | "all" | "self"; before: Date | null; take: number; mediaOnly?: boolean; applyFeedFilters: boolean },
 ): Promise<Cand[]> {
   const ws = ctx.workspace.id;
   const time = opts.before ? { lte: opts.before } : undefined;
@@ -67,14 +68,14 @@ async function chronoCandidates(
     opts.includeReplies === "none"
       ? { replyToId: null }
       : opts.includeReplies === "among"
-        ? { OR: [{ replyToId: null }, { replyTo: { authorId: { in: opts.authors } } }] }
+        ? { OR: [{ replyToId: null }, { replyTo: { authorId: { in: opts.authors ?? [] } } }] }
         : opts.includeReplies === "self"
-          ? { OR: [{ replyToId: null }, { replyTo: { authorId: { in: opts.authors } } }] }
+          ? { OR: [{ replyToId: null }, { replyTo: { authorId: { in: opts.authors ?? [] } } }] }
           : {};
   const posts = await prisma.post.findMany({
     where: {
       workspaceId: ws,
-      authorId: { in: opts.authors },
+      ...(opts.authors ? { authorId: { in: opts.authors } } : {}),
       deletedAt: null,
       ...(time ? { createdAt: time } : {}),
       ...replyFilter,
@@ -163,7 +164,19 @@ async function materialize(ctx: RequestContext, g: ViewerGraph, page: Cand[], ne
 
 // --------------------------------------------------------------------------------
 
+/**
+ * Live-mode guests follow nobody: their Home is the public timeline — newest original
+ * posts from public accounts (visibility rules still apply).
+ */
+export async function publicTimeline(ctx: RequestContext, cursorStr?: string | null): Promise<TimelinePage> {
+  const g = await loadViewerGraph(prisma, ctx);
+  const cursor = decode<ChronoCursor>(cursorStr);
+  const cands = await chronoCandidates(ctx, g, { authors: null, includeReplies: "none", before: cursor ? new Date(cursor.t) : null, take: PAGE * 3, applyFeedFilters: true });
+  return finishChrono(ctx, g, cands, cursor, { parents: false });
+}
+
 export async function latestTimeline(ctx: RequestContext, cursorStr?: string | null): Promise<TimelinePage> {
+  if (!isMember(ctx)) return publicTimeline(ctx, cursorStr);
   const g = await loadViewerGraph(prisma, ctx);
   const cursor = decode<ChronoCursor>(cursorStr);
   const authors = [g.id, ...g.following].filter((id) => !g.muting.has(id) || id === g.id);
@@ -181,6 +194,7 @@ export async function latestTimeline(ctx: RequestContext, cursorStr?: string | n
 type HomeCursor = { asOf: string; o: number };
 
 export async function homeTimeline(ctx: RequestContext, cursorStr?: string | null): Promise<TimelinePage> {
+  if (!isMember(ctx)) return publicTimeline(ctx, cursorStr);
   const ws = ctx.workspace.id;
   const g = await loadViewerGraph(prisma, ctx);
   const cur = decode<HomeCursor>(cursorStr);
@@ -277,6 +291,7 @@ export async function homeTimeline(ctx: RequestContext, cursorStr?: string | nul
 
 /** Count of posts newer than `since` that would appear in Latest (for "Show new posts"). */
 export async function newPostsSince(ctx: RequestContext, since: string) {
+  if (!isMember(ctx)) return { count: 0, authors: [] };
   const g = await loadViewerGraph(prisma, ctx);
   const sinceDate = new Date(since);
   if (Number.isNaN(sinceDate.getTime())) throw new AppError("VALIDATION", "Invalid date.");

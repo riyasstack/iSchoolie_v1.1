@@ -3,6 +3,37 @@
 Recorded 24 Nov 2026 and updated 26 Nov 2026 on Windows 11 (Node 24.20, PostgreSQL 17 embedded, Chromium 159 via
 Playwright 1.65.1). These are the results of runs actually executed during the build.
 
+## Authentication phase (26 Nov 2026) — latest results
+
+Supabase Auth live mode, read-only guests, onboarding. All runs below were executed after
+the auth work landed.
+
+| Suite | Result |
+|---|---|
+| `npm test` (unit + integration) | **115 passed / 0 failed** (12 files) — adds `tests/integration/auth-live.test.ts` (23) and `tests/unit/auth-paths.test.ts` (2) |
+| `npx playwright test` (all projects) | **39 passed / 0 failed** (5.9 min): 30 demo desktop, 1 mobile, 8 `live-guest` (live server on :3001) |
+| Lint / types | 0 errors / pass |
+| Production build (`APP_MODE=live`, `NEXT_DIST_DIR=.next-build`) | pass; includes `/signin`, `/signup`, `/onboarding`, `/auth/{callback,confirm,forgot,reset,signout}` |
+
+What the new tests cover: guest reads (public Home, post detail with no view-event write,
+profiles, search with no recent-search write, explore); 14 guest writes/private reads
+refused with `401 SIGN_UP_REQUIRED` and row counts unchanged; protected accounts hidden
+from guests; onboarding viewers limited to reads + `/onboarding` (`403
+ONBOARDING_REQUIRED`); one profile per Supabase identity; taken/reserved/malformed
+usernames; members get no demo controls; `next=` open-redirect protection; in the
+browser: sign-up prompts on like/reply/repost/follow, private pages → `/signin?next=…`,
+sign-in/sign-up/forgot pages and validation, callback errors.
+
+Not run (needs real third-party accounts, see AUTH_INTEGRATION.md): a real email
+confirmation, and Google/GitHub OAuth round trips — both providers are still disabled in
+the Supabase project. Supabase claims were injected in integration tests exactly as
+`getClaims()` returns them.
+
+Issue found and fixed during this run: setting `distDir` unconditionally in
+`next.config.ts` (even to the default `.next`) made the Turbopack dev server send a full
+page reload after every request, so pages never finished loading. `distDir` is now set
+only when `NEXT_DIST_DIR` is given; both dev servers then ran side by side without reloads.
+
 ## Static checks
 
 | Check | Command | Result |

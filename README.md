@@ -4,10 +4,15 @@ A consumer social network web app with the layout, density and interaction patte
 the **September 2020** responsive Twitter website, branded as iSchoolie (Posts, Reposts,
 Quote Posts). One responsive codebase for phone, tablet and desktop.
 
-> **Status: functioning, isolated demo environment — not a public production service.**
-> There is no sign-in. Each browser session gets its own private, server-persisted
-> workspace filled with fictional people and posts. See [AUTH_INTEGRATION.md](AUTH_INTEGRATION.md)
-> for the future authentication phase.
+> **Status: functioning demo environment, plus a live mode with real sign-in — not yet a
+> public production service.**
+> - `APP_MODE=demo`: no sign-in. Each browser session gets its own private, server-persisted
+>   workspace filled with fictional people and posts.
+> - `APP_MODE=live`: one shared network with **Supabase Auth** — sign up / log in with email +
+>   password, Google or GitHub, password reset, onboarding (pick a @username), log out.
+>   Visitors can browse the feed, profiles and search as read-only **guests**; any action
+>   (post, reply, like, repost, follow, message, vote) asks them to sign up.
+>   See [AUTH_INTEGRATION.md](AUTH_INTEGRATION.md) for setup (Supabase dashboard steps).
 
 - Architecture & persistence: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 - Screen/feature checklist with verification status: [docs/CHECKLIST.md](docs/CHECKLIST.md)
@@ -93,8 +98,11 @@ npm run start
 ```
 
 Run `npm run worker` alongside it. `APP_MODE` must be set explicitly (`demo` or `live`);
-it is independent of `NODE_ENV`. `live` refuses private requests until authentication is
-integrated.
+it is independent of `NODE_ENV`. `live` uses Supabase Auth (set
+`NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, run
+`npm run live:bootstrap`, and configure the dashboard as described in AUTH_INTEGRATION.md).
+For local development, `npm run dev:live` runs a live-mode server on port 3001 beside the
+demo server on 3000.
 
 ## Tests
 
@@ -146,7 +154,8 @@ They don't exist in live mode.
 
 ## Public-release requirements (not done here)
 
-Real authentication (see AUTH_INTEGRATION.md), running the S3 adapter against your real
+Enabling Google/GitHub in the Supabase dashboard and a custom SMTP sender (see
+AUTH_INTEGRATION.md), running the S3 adapter against your real
 bucket, a staffed moderation workflow for reports, push/email delivery services (after
 sign-in exists), scale work (counters, caching), trusted-proxy configuration for IP rate
 limits, and a security review. Do not deploy publicly as-is.

@@ -10,7 +10,7 @@ import {
 import { Avatar, DisplayName, Menu, MenuItem } from "@/components/ui/misc";
 import { ConfirmDialog } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
-import { useSession } from "@/components/providers";
+import { GuestGate, useSession } from "@/components/providers";
 import { compactCount, fullTime, relativeTime, absoluteTitle, pollTimeLeft } from "@/lib/format";
 import { del, put, errorMessage } from "@/lib/api";
 import { RichText } from "./rich-text";
@@ -245,6 +245,7 @@ function PollView({ p }: { p: PostDTO }) {
   const max = Math.max(...poll.options.map((o) => o.votes));
   return (
     <div className="mt-3" onClick={(e) => e.stopPropagation()}>
+      <GuestGate action="vote in polls">
       <div className="space-y-2" role="group" aria-label="Poll">
         {poll.options.map((o) => {
           const pct = poll.totalVotes ? Math.round((o.votes / poll.totalVotes) * 100) : 0;
@@ -272,6 +273,7 @@ function PollView({ p }: { p: PostDTO }) {
           );
         })}
       </div>
+      </GuestGate>
       <p className="mt-2 text-fg2">
         {compactCount(poll.totalVotes)} vote{poll.totalVotes === 1 ? "" : "s"} · {pollTimeLeft(poll.endsAt)}
         {p.viewer.isAuthor && !poll.closed && " · You can’t vote in your own poll"}
@@ -374,6 +376,7 @@ export function PostActions({ p, large }: { p: PostDTO; large?: boolean }) {
     }
   };
   return (
+    <GuestGate action="reply, repost and like posts">
     <div className={clsx("flex items-center", large ? "justify-around border-t border-line py-1" : "mt-3 max-w-[425px] justify-between")} role="group" aria-label="Post actions">
       <ActionButton
         label={p.viewer.canReply ? `Reply${p.counts.replies ? `, ${p.counts.replies} replies` : ""}` : p.viewer.replyRestriction ?? "Replies are limited"}
@@ -431,7 +434,7 @@ export function PostActions({ p, large }: { p: PostDTO; large?: boolean }) {
       <Menu
         label="Share"
         trigger={
-          <button type="button" aria-label="Share post" title="Share" onClick={(e) => e.stopPropagation()} className={clsx("group flex min-h-[32px] items-center", p.viewer.bookmarked ? "text-accent-text" : "text-fg2")}>
+          <button type="button" data-guest-ok="" aria-label="Share post" title="Share" onClick={(e) => e.stopPropagation()} className={clsx("group flex min-h-[32px] items-center", p.viewer.bookmarked ? "text-accent-text" : "text-fg2")}>
             <span className="-m-2 grid h-[34.75px] w-[34.75px] place-items-center rounded-full transition-colors group-hover:bg-accent-soft group-hover:text-accent-text">
               <Upload size={size} />
             </span>
@@ -467,6 +470,7 @@ export function PostActions({ p, large }: { p: PostDTO; large?: boolean }) {
         </button>
       )}
     </div>
+    </GuestGate>
   );
 }
 

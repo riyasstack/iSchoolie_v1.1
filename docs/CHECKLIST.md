@@ -77,6 +77,11 @@ Test files: `tests/unit/*` (Vitest), `tests/integration/services.test.ts` and
 | Responsive 320–1920, no horizontal overflow | A | e2e 18 (10 screens × 9 widths) |
 | Session isolation, forged ids, CSRF, private media | A | e2e security; integration isolation |
 | Failed mutation rollback; offline error keeps content | A | e2e 14 |
+| Live mode sign-in / sign-up pages (email + password, Google, GitHub buttons, forgot/reset password) | A (UI, validation, redirects) | live-guest e2e; **real OAuth round trip not run: Google/GitHub providers are not enabled in the Supabase project yet** |
+| Supabase session verification, onboarding (pick @username), one profile per identity | A | auth-live integration (claims injected as `getClaims()` returns them) |
+| Read-only guest mode (feed, post pages, profiles, search, explore) with sign-up prompts | A | auth-live integration (14 refused routes, nothing written); live-guest e2e |
+| Private pages redirect guests to sign-in and back (`next`, open-redirect safe) | A | auth-paths unit; live-guest e2e |
+| Log out, change/set password, linked sign-in methods in Settings | B (built; needs a real signed-in account to exercise) | typecheck/lint; not run against a real Supabase account |
 
 ## Not done, and why
 
@@ -89,5 +94,9 @@ Test files: `tests/unit/*` (Vitest), `tests/integration/services.test.ts` and
 - **S3 adapter against real cloud storage** — implemented and contract-tested against a local
   S3-compatible server only.
 - **Pixel comparison against dated 2020 screenshots** — none were supplied.
-- **Real authentication and public launch** — out of scope for this phase by the brief
-  (see AUTH_INTEGRATION.md).
+- **Google / GitHub sign-in end to end** — the code path is built and the buttons are live,
+  but the providers must be enabled in the Supabase dashboard with OAuth client credentials
+  (only the project owner can create those). Until then the buttons show “not enabled yet”.
+- **Email confirmation end to end** — needs a real inbox; no real Supabase accounts were
+  created during testing.
+- **Public launch** — still needs the items in README “Public-release requirements”.

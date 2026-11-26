@@ -9,7 +9,7 @@ import Link from "next/link";
 import { useQuery, useQueryClient, type InfiniteData } from "@tanstack/react-query";
 import clsx from "clsx";
 import { Image as ImageIcon, Smile, BarChart2, CalendarClock, Plus, X, Globe, Users, AtSign, RotateCcw, Check } from "lucide-react";
-import { useSession } from "@/components/providers";
+import { useIsGuest, useReturnTo, useSession } from "@/components/providers";
 import { Avatar, DisplayName, Menu, MenuItem } from "@/components/ui/misc";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogBody, ConfirmDialog } from "@/components/ui/dialog";
@@ -134,7 +134,27 @@ export interface ComposerProps {
   showReplyContext?: boolean;
 }
 
-export function Composer({ mode, replyToId = null, quoteId = null, draftId: initialDraftId = null, scheduledId = null, onDone, registerClose, showReplyContext = true }: ComposerProps) {
+/** Guests can't post: show a sign-up call to action in place of the composer. */
+export function Composer(props: ComposerProps) {
+  const guest = useIsGuest();
+  if (guest) return <GuestComposer reply={!!props.replyToId} modal={props.mode !== "inline"} />;
+  return <MemberComposer {...props} />;
+}
+
+function GuestComposer({ reply, modal }: { reply: boolean; modal: boolean }) {
+  const ret = useReturnTo();
+  return (
+    <div className={modal ? "px-6 py-8 text-center" : "flex items-center justify-between gap-3 border-b border-line px-4 py-3"} data-testid="guest-composer">
+      <p className={modal ? "mb-4 text-fg2" : "text-fg2"}>{reply ? "Sign up or log in to reply." : "Sign up or log in to post on iSchoolie."}</p>
+      <div className={modal ? "flex justify-center gap-3" : "flex shrink-0 gap-2"}>
+        <a href={`/signin${ret}`} className="inline-flex min-h-[32px] items-center rounded-full border border-accent px-4 text-sm font-bold text-accent-text hover:bg-accent-soft">Log in</a>
+        <a href={`/signup${ret}`} className="inline-flex min-h-[32px] items-center rounded-full bg-accent px-4 text-sm font-bold text-accent-on hover:bg-accent-hover">Sign up</a>
+      </div>
+    </div>
+  );
+}
+
+function MemberComposer({ mode, replyToId = null, quoteId = null, draftId: initialDraftId = null, scheduledId = null, onDone, registerClose, showReplyContext = true }: ComposerProps) {
   const session = useSession();
   const qc = useQueryClient();
   const toast = useToast();

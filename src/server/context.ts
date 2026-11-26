@@ -6,14 +6,18 @@
  * Demo mode: an opaque, HMAC-signed, HttpOnly session cookie maps to a DemoSession
  * row (stored as a SHA-256 hash), which names the workspace and current actor.
  *
- * Live mode: replace `resolveLiveContext` with the real authentication provider.
- * See AUTH_INTEGRATION.md.
+ * Live mode: Supabase Auth session cookies (refreshed by the proxy) are verified with
+ * `getClaims()` and mapped to a profile in the LIVE workspace (src/server/auth.ts).
+ * Without a session the viewer is a read-only guest. See AUTH_INTEGRATION.md.
  */
 import { cookies } from "next/headers";
 import { prisma } from "./db";
 import { env } from "./env";
 import { AppError } from "./errors";
 import { SESSION_COOKIE, hashToken, verifyCookie } from "@/lib/session-token";
+import { supabaseConfigured } from "@/lib/supabase/config";
+import { supabaseServer } from "@/lib/supabase/server";
+import { contextFromClaims, type AuthClaims } from "./auth";
 
 export interface Capabilities {
   /** Demo-only: switch between seeded identities inside this workspace. */
@@ -29,7 +33,13 @@ export interface RequestContext {
   capabilities: Capabilities;
   /** Demo session hash; present only in demo mode. */
   sessionHash?: string;
+  /** Live mode: member (default when absent), signed-in-but-not-onboarded, or read-only guest. */
+  viewer?: "member" | "onboarding" | "guest";
+  /** Live mode: the verified Supabase identity. */
+  auth?: { subject: string; email: string | null; providers: string[]; suggestion?: { displayName: string; handle: string } };
 }
+
+export { isMember } from "./viewer";
 
 export const SESSION_TTL_DAYS = 7;
 const TOUCH_INTERVAL_MS = 5 * 60 * 1000;
@@ -88,12 +98,15 @@ async function resolveDemoContext(): Promise<RequestContext> {
 }
 
 /**
- * Live mode is deliberately not wired: there is no authentication provider yet.
- * It never falls back to demo mode.
+ * Live mode: verify the Supabase session and map it to a profile. Never falls back to
+ * demo mode; if Supabase isn't configured, private access is refused.
  */
 async function resolveLiveContext(): Promise<RequestContext> {
-  throw new AppError(
-    "AUTH_NOT_CONFIGURED",
-    "Live mode requires an authentication provider. See AUTH_INTEGRATION.md.",
-  );
+  if (!supabaseConfigured()) {
+    throw new AppError("AUTH_NOT_CONFIGURED", "Live mode requires Supabase settings. See AUTH_INTEGRATION.md.");
+  }
+  const supabase = await supabaseServer();
+  // getClaims() verifies the JWT (locally with the project's signing keys when available).
+  const { data } = await supabase.auth.getClaims();
+  return contextFromClaims((data?.claims as AuthClaims | undefined) ?? null);
 }

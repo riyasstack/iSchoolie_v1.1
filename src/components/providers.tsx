@@ -1,7 +1,9 @@
 "use client";
 import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { get, post, ApiError, SESSION_EVENT } from "@/lib/api";
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode, type SyntheticEvent } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { get, post, ApiError, SESSION_EVENT, AUTH_PROMPT_EVENT } from "@/lib/api";
 import type { PreferencesDTO, SessionDTO } from "@/lib/types";
 import { ToastProvider } from "./ui/toast";
 import { useRealtimeConnected } from "@/features/realtime";
@@ -43,6 +45,56 @@ export function useOptionalSession(): SessionDTO | null {
   return useContext(SessionContext);
 }
 
+/** True for live-mode guests and signed-in viewers who haven't picked a username yet. */
+export function useIsGuest(): boolean {
+  const s = useOptionalSession();
+  return !!s && s.viewer !== "member";
+}
+
+const AuthPromptContext = createContext<(action?: string) => void>(() => {});
+
+/**
+ * Returns a guard for account-only actions: true for members; for guests it opens the
+ * sign-up prompt and returns false. The API refuses these actions for guests anyway.
+ */
+export function useRequireAccount(): (action?: string) => boolean {
+  const s = useOptionalSession();
+  const prompt = useContext(AuthPromptContext);
+  return useCallback(
+    (action?: string) => {
+      if (!s || s.viewer === "member") return true;
+      prompt(action);
+      return false;
+    },
+    [s, prompt],
+  );
+}
+
+/**
+ * Wraps account-only controls: for guests, interacting with them opens the sign-up
+ * prompt instead. Descendants marked data-guest-ok stay usable.
+ */
+export function GuestGate({ action, children }: { action: string; children: ReactNode }) {
+  const guest = useIsGuest();
+  const prompt = useContext(AuthPromptContext);
+  if (!guest) return <>{children}</>;
+  const stop = (e: SyntheticEvent) => {
+    if ((e.target as HTMLElement).closest("[data-guest-ok]")) return;
+    if (e.type === "keydown") {
+      const k = (e.nativeEvent as KeyboardEvent).key;
+      if (k !== "Enter" && k !== " ") return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type !== "pointerdown") prompt(action);
+  };
+  return (
+    <div className="contents" data-guest-gate="" onPointerDownCapture={stop} onClickCapture={stop} onKeyDownCapture={stop}>
+      {children}
+    </div>
+  );
+}
+
 export function usePreferences(): PreferencesDTO {
   return useSession().preferences;
 }
@@ -68,7 +120,7 @@ export function SessionGate({ children }: { children: ReactNode }) {
   const badges = useQuery({
     queryKey: ["badges"],
     queryFn: () => get<SessionDTO["badges"]>("/session/badges"),
-    enabled: !!session.data,
+    enabled: !!session.data && session.data.viewer === "member",
     // Realtime events invalidate badges immediately; polling is only a fallback.
     refetchInterval: () => (typeof document !== "undefined" && document.visibilityState === "visible" ? (realtime ? 120_000 : 30_000) : false),
   });
@@ -81,7 +133,19 @@ export function SessionGate({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (session.data) applyPreferences(session.data.preferences);
+    // Signed in but no profile yet: finish onboarding first.
+    if (session.data?.viewer === "onboarding") {
+      window.location.replace(`/onboarding?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+    }
   }, [session.data]);
+
+  const [promptAction, setPromptAction] = useState<string | null>(null);
+  const openPrompt = useCallback((action?: string) => setPromptAction(action ?? "join the conversation"), []);
+  useEffect(() => {
+    const onPrompt = () => openPrompt();
+    window.addEventListener(AUTH_PROMPT_EVENT, onPrompt);
+    return () => window.removeEventListener(AUTH_PROMPT_EVENT, onPrompt);
+  }, [openPrompt]);
 
   const restart = async () => {
     setRestarting(true);
@@ -115,6 +179,7 @@ export function SessionGate({ children }: { children: ReactNode }) {
   const value = session.data ? { ...session.data, badges: badges.data ?? session.data.badges } : null;
   return (
     <SessionContext.Provider value={value}>
+     <AuthPromptContext.Provider value={openPrompt}>
       {value ? children : <FullPageMessage title="Your demo session ended" body="Demo sessions expire after a period of inactivity. Start a fresh demo workspace to continue." action={<Button onClick={restart} disabled={restarting}>{restarting ? "Starting…" : "Start a new demo"}</Button>} />}
       <Dialog open={expired && !!value} onOpenChange={() => {}} title="Your demo session ended" dismissible={false}>
         <DialogBody>
@@ -127,6 +192,8 @@ export function SessionGate({ children }: { children: ReactNode }) {
           <Button onClick={restart} disabled={restarting}>{restarting ? "Starting…" : "Start a new demo"}</Button>
         </DialogFooter>
       </Dialog>
+      <SignUpPrompt action={promptAction} onClose={() => setPromptAction(null)} />
+     </AuthPromptContext.Provider>
     </SessionContext.Provider>
   );
 }
@@ -147,5 +214,30 @@ export function FullPageMessage({ title, body, action }: { title: string; body: 
       <p className="text-fg2">{body}</p>
       {action}
     </main>
+  );
+}
+
+/** Query string that brings the viewer back to the current page after signing in. */
+export function useReturnTo(): string {
+  const pathname = usePathname();
+  return pathname && pathname !== "/" ? `?next=${encodeURIComponent(pathname)}` : "";
+}
+
+function SignUpPrompt({ action, onClose }: { action: string | null; onClose: () => void }) {
+  const ret = useReturnTo();
+  return (
+    <Dialog open={action !== null} onOpenChange={(o) => !o && onClose()} title="Join iSchoolie" hideTitle width={420}>
+      <div className="flex flex-col items-center px-8 pb-8 pt-2 text-center" data-testid="signup-prompt">
+        <img src="/brand/ischoolie-symbol.png" alt="" width={44} height={44} />
+        <h2 className="mt-4 text-[23px] font-extrabold leading-tight">Don’t miss what’s happening</h2>
+        <p className="mt-2 text-fg2">You’re browsing as a guest. Sign up or log in to {action ?? "join the conversation"}.</p>
+        <Link href={`/signup${ret}`} onClick={onClose} className="mt-6 inline-flex min-h-[44px] w-full items-center justify-center rounded-full bg-accent px-4 font-bold text-accent-on hover:bg-accent-hover">
+          Sign up
+        </Link>
+        <Link href={`/signin${ret}`} onClick={onClose} className="mt-3 inline-flex min-h-[44px] w-full items-center justify-center rounded-full border border-accent px-4 font-bold text-accent-text hover:bg-accent-soft">
+          Log in
+        </Link>
+      </div>
+    </Dialog>
   );
 }

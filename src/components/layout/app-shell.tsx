@@ -5,8 +5,8 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import clsx from "clsx";
 import { Dialog as R } from "radix-ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { MoreHorizontal, Plus, Search, X, MailPlus, Settings, HelpCircle, Paintbrush, Keyboard, UserCheck, Zap, ScrollText, MessageSquareText, Bookmark, User, Users, RotateCcw, FlaskConical } from "lucide-react";
-import { useSession } from "@/components/providers";
+import { MoreHorizontal, Plus, Search, X, MailPlus, Settings, HelpCircle, Paintbrush, Keyboard, UserCheck, Zap, ScrollText, MessageSquareText, Bookmark, User, Users, RotateCcw, FlaskConical, LogOut, LogIn } from "lucide-react";
+import { useIsGuest, useRequireAccount, useReturnTo, useSession } from "@/components/providers";
 import { Avatar, DisplayName, Menu, MenuItem } from "@/components/ui/misc";
 import { NavIcon, Feather, type NavKey } from "./nav-icons";
 import { get } from "@/lib/api";
@@ -45,6 +45,7 @@ function navActive(pathname: string, key: NavKey, handle: string): boolean {
 
 export function AppShell({ children, modal }: { children: ReactNode; modal?: ReactNode }) {
   const pathname = usePathname();
+  const guest = useIsGuest();
   const [drawer, setDrawer] = useState(false);
   const wide = pathname.startsWith("/messages") || pathname.startsWith("/settings");
   const hideRail = wide || pathname.startsWith("/compose");
@@ -60,7 +61,7 @@ export function AppShell({ children, modal }: { children: ReactNode; modal?: Rea
           <div className="mx-auto flex min-h-dvh w-full justify-center sm:px-0">
             <LeftNav />
             <div className={clsx("flex min-w-0 flex-1 justify-between", wide ? "sm:max-w-[990px]" : hideRail ? "sm:max-w-[600px]" : "sm:max-w-[600px] md:max-w-[920px] lg:max-w-[990px]")}>
-              <main id="main" className={clsx("min-h-dvh w-full min-w-0 border-line sm:border-x sm:pb-0", !inConversation && "pb-[calc(var(--h-bottom-nav)+env(safe-area-inset-bottom))]", !wide && "sm:max-w-[600px] md:w-[600px] md:shrink-0")}>
+              <main id="main" className={clsx("min-h-dvh w-full min-w-0 border-line sm:border-x sm:pb-0", !inConversation && "pb-[calc(var(--h-bottom-nav)+env(safe-area-inset-bottom))]", guest && "!pb-[calc(var(--h-bottom-nav)+140px+env(safe-area-inset-bottom))] sm:!pb-[90px]", !wide && "sm:max-w-[600px] md:w-[600px] md:shrink-0")}>
                 {children}
               </main>
               {!hideRail && <RightRail />}
@@ -71,7 +72,8 @@ export function AppShell({ children, modal }: { children: ReactNode; modal?: Rea
           <BottomNav />
           <MobileDrawer open={drawer} onOpenChange={setDrawer} />
           <KeyboardShortcuts />
-          <RealtimeBridge />
+          {!guest && <RealtimeBridge />}
+          {guest && <GuestBar />}
           {modal}
         </DrawerCtx.Provider>
       </DialogsProvider>
@@ -84,7 +86,9 @@ function LeftNav() {
   const s = useSession();
   const pathname = usePathname();
   const demo = useDemoControls();
-  const items: { key: NavKey; label: string; href: string; badge?: number }[] = [
+  const guest = useIsGuest();
+  const requireAccount = useRequireAccount();
+  const all: { key: NavKey; label: string; href: string; badge?: number }[] = [
     { key: "home", label: "Home", href: "/home" },
     { key: "explore", label: "Explore", href: "/explore" },
     { key: "notifications", label: "Notifications", href: "/notifications", badge: s.badges.notifications },
@@ -93,6 +97,8 @@ function LeftNav() {
     { key: "lists", label: "Lists", href: "/i/lists" },
     { key: "profile", label: "Profile", href: `/${s.actor.handle}` },
   ];
+  // Guests browse public content only.
+  const items = guest ? all.filter((it) => it.key === "home" || it.key === "explore") : all;
   return (
     <header className="sticky top-0 hidden h-dvh w-[88px] shrink-0 flex-col items-end sm:flex xl:w-[275px]" role="banner">
       <div className="flex h-full w-[88px] flex-col items-center overflow-y-auto px-2 no-scrollbar xl:w-[275px] xl:items-stretch xl:px-3">
@@ -130,23 +136,23 @@ function LeftNav() {
           >
             <MenuItem icon={<MessageSquareText />} href="/i/topics">Topics</MenuItem>
             <MenuItem icon={<Zap />} href="/i/moments">Moments</MenuItem>
-            <MenuItem icon={<UserCheck />} href="/i/follower_requests">Follower requests{s.badges.followRequests ? ` (${s.badges.followRequests})` : ""}</MenuItem>
-            <MenuItem icon={<Users />} href="/i/connect">Connect</MenuItem>
-            <MenuItem icon={<Settings />} href="/settings">Settings and privacy</MenuItem>
+            {!guest && <MenuItem icon={<UserCheck />} href="/i/follower_requests">Follower requests{s.badges.followRequests ? ` (${s.badges.followRequests})` : ""}</MenuItem>}
+            {!guest && <MenuItem icon={<Users />} href="/i/connect">Connect</MenuItem>}
+            {!guest && <MenuItem icon={<Settings />} href="/settings">Settings and privacy</MenuItem>}
             <MenuItem icon={<HelpCircle />} href="/help">Help Center</MenuItem>
             <MenuItem icon={<Paintbrush />} href="/i/display">Display</MenuItem>
             <MenuItem icon={<Keyboard />} href="/i/keyboard_shortcuts">Keyboard shortcuts</MenuItem>
-            <MenuItem icon={<FlaskConical />} onSelect={demo.openSwitcher}>Switch demo identity…</MenuItem>
+            {s.capabilities.switchActor && <MenuItem icon={<FlaskConical />} onSelect={demo.openSwitcher}>Switch demo identity…</MenuItem>}
           </Menu>
         </nav>
-        <Link href="/compose/post" scroll={false} aria-label="Post" className="mt-4 flex h-[52px] w-[52px] items-center justify-center rounded-full bg-accent text-accent-on shadow-sm transition-colors hover:bg-accent-hover xl:h-[49px] xl:w-[90%]">
+        <Link href="/compose/post" scroll={false} aria-label="Post" onClick={(e) => { if (!requireAccount("post")) e.preventDefault(); }} className="mt-4 flex h-[52px] w-[52px] items-center justify-center rounded-full bg-accent text-accent-on shadow-sm transition-colors hover:bg-accent-hover xl:h-[49px] xl:w-[90%]">
           <span className="xl:hidden">
             <Feather size={22} />
           </span>
           <span className="hidden text-[0.9375rem] font-bold xl:inline">Post</span>
         </Link>
         <div className="mt-auto py-3">
-          <AccountMenu />
+          {guest ? <GuestNavCard /> : <AccountMenu />}
         </div>
       </div>
     </header>
@@ -187,9 +193,10 @@ function AccountMenu() {
         </div>
       </div>
       <MenuItem icon={<User />} href={`/${s.actor.handle}`}>Profile</MenuItem>
-      <MenuItem icon={<FlaskConical />} onSelect={demo.openSwitcher}>Switch demo identity…</MenuItem>
-      <MenuItem icon={<RotateCcw />} onSelect={demo.openReset}>Reset demo workspace…</MenuItem>
-      <MenuItem icon={<HelpCircle />} href="/help#demo-mode">About demo mode</MenuItem>
+      {s.capabilities.switchActor && <MenuItem icon={<FlaskConical />} onSelect={demo.openSwitcher}>Switch demo identity…</MenuItem>}
+      {s.capabilities.resetWorkspace && <MenuItem icon={<RotateCcw />} onSelect={demo.openReset}>Reset demo workspace…</MenuItem>}
+      {s.mode === "demo" && <MenuItem icon={<HelpCircle />} href="/help#demo-mode">About demo mode</MenuItem>}
+      {s.mode === "live" && <MenuItem icon={<LogOut />} onSelect={signOut}>Log out @{s.actor.handle}</MenuItem>}
     </Menu>
   );
 }
@@ -294,12 +301,14 @@ function RailFooter() {
 function BottomNav() {
   const s = useSession();
   const pathname = usePathname();
-  const items: { key: NavKey; label: string; href: string; badge?: number; icon: NavKey }[] = [
+  const guest = useIsGuest();
+  const all: { key: NavKey; label: string; href: string; badge?: number; icon: NavKey }[] = [
     { key: "home", label: "Home", href: "/home", icon: "home" },
     { key: "explore", label: "Search and Explore", href: "/explore", icon: "search" },
     { key: "notifications", label: "Notifications", href: "/notifications", badge: s.badges.notifications, icon: "notifications" },
     { key: "messages", label: "Messages", href: "/messages", badge: s.badges.messages, icon: "messages" },
   ];
+  const items = guest ? all.filter((it) => it.key === "home" || it.key === "explore") : all;
   // Keep the conversation input clear of the bottom bar.
   if (/^\/messages\/[^/]+$/.test(pathname) && pathname !== "/messages/compose" && pathname !== "/messages/requests") return null;
   // Full-screen compose flow on phones.
@@ -324,9 +333,13 @@ function BottomNav() {
 }
 
 function MobileFab({ messages }: { messages: boolean }) {
+  const requireAccount = useRequireAccount();
+  const guest = useIsGuest();
+  if (guest) return null;
   return (
     <Link
       href={messages ? "/messages/compose" : "/compose/post"}
+      onClick={(e) => { if (!requireAccount(messages ? "send messages" : "post")) e.preventDefault(); }}
       scroll={false}
       aria-label={messages ? "New message" : "Post"}
       className="fixed bottom-[calc(var(--h-bottom-nav)+16px+env(safe-area-inset-bottom))] right-4 z-40 grid h-14 w-14 place-items-center rounded-full bg-accent text-accent-on shadow-lg sm:hidden"
@@ -340,12 +353,14 @@ function MobileDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (o:
   const s = useSession();
   const demo = useDemoControls();
   const pathname = usePathname();
+  const guest = useIsGuest();
+  const ret = useReturnTo();
   const first = useRef(pathname);
   useEffect(() => {
     if (pathname !== first.current) onOpenChange(false);
     first.current = pathname;
   }, [pathname, onOpenChange]);
-  const prof = useQuery({ queryKey: ["profile", s.actor.handle.toLowerCase()], queryFn: () => get<ProfileDTO>(`/users/${s.actor.handle}`), enabled: open });
+  const prof = useQuery({ queryKey: ["profile", s.actor.handle.toLowerCase()], queryFn: () => get<ProfileDTO>(`/users/${s.actor.handle}`), enabled: open && !guest });
   const link = (href: string, icon: ReactNode, label: string) => (
     <Link href={href} onClick={() => onOpenChange(false)} className="flex min-h-[52px] items-center gap-4 px-4 text-[0.9375rem] hover:bg-hover-strong [&>svg]:text-fg2">
       {icon}
@@ -363,6 +378,14 @@ function MobileDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (o:
               <X size={20} />
             </R.Close>
           </div>
+          {guest ? (
+            <div className="px-4 py-4">
+              <p className="font-extrabold">You’re browsing as a guest</p>
+              <p className="mt-1 text-sm text-fg2">Sign up to post, reply, like, follow and send messages.</p>
+              <Link href={`/signup${ret}`} className="mt-4 flex min-h-[40px] items-center justify-center rounded-full bg-accent font-bold text-accent-on">Sign up</Link>
+              <Link href={`/signin${ret}`} className="mt-2 flex min-h-[40px] items-center justify-center rounded-full border border-accent font-bold text-accent-text">Log in</Link>
+            </div>
+          ) : (
           <div className="px-4 py-3">
             <Link href={`/${s.actor.handle}`} onClick={() => onOpenChange(false)}>
               <Avatar user={s.actor} size={40} />
@@ -378,24 +401,32 @@ function MobileDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (o:
               </Link>
             </div>
           </div>
+          )}
           <nav aria-label="Account" className="border-t border-line py-1">
-            {link(`/${s.actor.handle}`, <User size={22} />, "Profile")}
-            {link("/i/lists", <ScrollText size={22} />, "Lists")}
+            {!guest && link(`/${s.actor.handle}`, <User size={22} />, "Profile")}
+            {!guest && link("/i/lists", <ScrollText size={22} />, "Lists")}
             {link("/i/topics", <MessageSquareText size={22} />, "Topics")}
-            {link("/i/bookmarks", <Bookmark size={22} />, "Bookmarks")}
+            {!guest && link("/i/bookmarks", <Bookmark size={22} />, "Bookmarks")}
             {link("/i/moments", <Zap size={22} />, "Moments")}
-            {link("/i/follower_requests", <UserCheck size={22} />, `Follower requests${s.badges.followRequests ? ` (${s.badges.followRequests})` : ""}`)}
+            {!guest && link("/i/follower_requests", <UserCheck size={22} />, `Follower requests${s.badges.followRequests ? ` (${s.badges.followRequests})` : ""}`)}
           </nav>
           <nav aria-label="Settings" className="border-t border-line py-1">
-            {link("/settings", <Settings size={22} />, "Settings and privacy")}
+            {!guest && link("/settings", <Settings size={22} />, "Settings and privacy")}
             {link("/help", <HelpCircle size={22} />, "Help Center")}
             {link("/i/display", <Paintbrush size={22} />, "Display")}
+            {s.capabilities.switchActor && (<>
             <button type="button" onClick={() => { onOpenChange(false); demo.openSwitcher(); }} className="flex min-h-[52px] w-full items-center gap-4 px-4 text-left hover:bg-hover-strong">
               <FlaskConical size={22} className="text-fg2" /> Switch demo identity
             </button>
             <button type="button" onClick={() => { onOpenChange(false); demo.openReset(); }} className="flex min-h-[52px] w-full items-center gap-4 px-4 text-left hover:bg-hover-strong">
               <RotateCcw size={22} className="text-fg2" /> Reset demo workspace
             </button>
+            </>)}
+            {s.mode === "live" && !guest && (
+              <button type="button" onClick={signOut} className="flex min-h-[52px] w-full items-center gap-4 px-4 text-left hover:bg-hover-strong">
+                <LogOut size={22} className="text-fg2" /> Log out
+              </button>
+            )}
           </nav>
         </R.Content>
       </R.Portal>
@@ -466,4 +497,51 @@ export function MobileSearchButton() {
 export function useInvalidateAll() {
   const qc = useQueryClient();
   return () => qc.invalidateQueries();
+}
+
+// ------------------------------------------------------------------ live auth chrome
+/** Signs out via the server route (clears the Supabase session cookies) and reloads. */
+export async function signOut() {
+  try {
+    await fetch("/auth/signout", { method: "POST", credentials: "same-origin" });
+  } finally {
+    window.location.assign("/home");
+  }
+}
+
+function GuestNavCard() {
+  const ret = useReturnTo();
+  return (
+    <div className="hidden flex-col gap-2 xl:flex" data-testid="guest-nav-card">
+      <Link href={`/signin${ret}`} className="flex min-h-[44px] items-center justify-center gap-2 rounded-full border border-accent font-bold text-accent-text hover:bg-accent-soft">
+        <LogIn size={18} /> Log in
+      </Link>
+      <Link href={`/signup${ret}`} className="flex min-h-[44px] items-center justify-center rounded-full bg-accent font-bold text-accent-on hover:bg-accent-hover">
+        Sign up
+      </Link>
+    </div>
+  );
+}
+
+/** Logged-out bottom bar, as on the 2020 layout. */
+function GuestBar() {
+  const ret = useReturnTo();
+  return (
+    <div role="region" aria-label="Sign up" data-testid="guest-bar" className="fixed inset-x-0 bottom-[calc(var(--h-bottom-nav)+env(safe-area-inset-bottom))] z-40 bg-accent text-accent-on sm:bottom-0">
+      <div className="mx-auto flex max-w-[990px] flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:py-3 xl:pl-[275px]">
+        <div className="min-w-0">
+          <p className="text-[1.1875rem] font-extrabold leading-tight sm:text-[1.4375rem]">Don’t miss what’s happening</p>
+          <p className="text-[0.9375rem]">People on iSchoolie are the first to know.</p>
+        </div>
+        <div className="flex shrink-0 gap-3">
+          <Link href={`/signin${ret}`} className="flex min-h-[36px] flex-1 items-center justify-center rounded-full border border-white/70 px-4 font-bold hover:bg-white/10 sm:flex-none">
+            Log in
+          </Link>
+          <Link href={`/signup${ret}`} className="flex min-h-[36px] flex-1 items-center justify-center rounded-full bg-white px-4 font-bold text-accent-text hover:bg-white/90 sm:flex-none">
+            Sign up
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
 }

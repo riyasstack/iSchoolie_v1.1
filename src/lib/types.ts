@@ -303,8 +303,16 @@ export interface PreferencesDTO {
   searchHideSensitive: boolean;
 }
 
+export type ViewerKind = "member" | "guest" | "onboarding";
+
 export interface SessionDTO {
   mode: "demo" | "live";
+  /** member = full access; guest = read-only (not signed in); onboarding = signed in, no profile yet. */
+  viewer: ViewerKind;
+  /** Live mode: the signed-in auth account (email + linked providers). */
+  account: { email: string | null; providers: string[] } | null;
+  /** Live mode: whether Supabase Auth is configured (sign-in UI available). */
+  authEnabled: boolean;
   actor: UserDTO & { isProtected: boolean; dmPolicy: "EVERYONE" | "FOLLOWING" };
   workspace: { id: string; createdAt: string; expiresAt: string | null; retentionDays: number };
   capabilities: { switchActor: boolean; resetWorkspace: boolean };

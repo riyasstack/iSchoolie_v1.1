@@ -8,6 +8,7 @@ import { ZodError, type ZodType } from "zod";
 import { AppError } from "./errors";
 import { log } from "./log";
 import { resolveRequestContext, type RequestContext } from "./context";
+import { isMember } from "./viewer";
 
 export type Method = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
 
@@ -32,6 +33,10 @@ export interface RouteDef {
   auth?: boolean;
   /** Default true for non-GET. Disable only for top-level navigations. */
   csrf?: boolean;
+  /** Live mode: read-only guests (not signed in) may call this route. Default false. */
+  guest?: boolean;
+  /** Live mode: signed-in viewers without a profile yet may call this route. Default false. */
+  onboarding?: boolean;
   handler: (args: HandlerArgs) => Promise<unknown>;
 }
 
@@ -71,8 +76,25 @@ function sameOrigin(req: NextRequest): boolean {
   return site === "same-origin" || site === "none";
 }
 
-export function createDispatcher(routes: RouteDef[]) {
+export interface DispatcherOptions {
+  /** Injectable for tests; defaults to the request-scoped resolver. */
+  resolve?: () => Promise<RequestContext>;
+}
+
+/** Guests and onboarding viewers are read-only: everything not explicitly allowed is refused. */
+export function assertViewerAllowed(route: Pick<RouteDef, "guest" | "onboarding">, ctx: RequestContext) {
+  if (isMember(ctx)) return;
+  if (ctx.viewer === "onboarding") {
+    if (route.onboarding || route.guest) return;
+    throw new AppError("ONBOARDING_REQUIRED", "Finish setting up your profile to do that.");
+  }
+  if (route.guest) return;
+  throw new AppError("SIGN_UP_REQUIRED", "Sign up or log in to do that.");
+}
+
+export function createDispatcher(routes: RouteDef[], options: DispatcherOptions = {}) {
   const table = compile(routes);
+  const resolve = options.resolve ?? resolveRequestContext;
   return async function dispatch(req: NextRequest, segments: string[]): Promise<Response> {
     const requestId = crypto.randomUUID();
     const started = Date.now();
@@ -103,7 +125,8 @@ export function createDispatcher(routes: RouteDef[]) {
           throw new AppError("CSRF", "Cross-site request rejected.");
         }
       }
-      const ctx = route.auth === false ? null : await resolveRequestContext();
+      const ctx = route.auth === false ? null : await resolve();
+      if (ctx) assertViewerAllowed(route, ctx);
       workspace = ctx?.workspace.id;
       const args = {
         req,

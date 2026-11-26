@@ -256,6 +256,7 @@ model User {
   reports           Report[]
   createdConversations Conversation[]
   postEvents        PostEvent[]
+  authIdentity      AuthIdentity?
 
   @@unique([workspaceId, id])
   @@unique([workspaceId, handleLower])
@@ -957,4 +958,18 @@ model LinkPreview {
   createdAt    DateTime      @default(now())
 
   @@unique([workspaceId, url])
+}
+
+/// Links an external identity (a Supabase Auth user) to a profile in the LIVE workspace.
+/// Supabase itself links email, Google and GitHub logins to one auth user (subject).
+model AuthIdentity {
+  id        String   @id @default(cuid())
+  provider  String
+  subject   String
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email     String?
+  createdAt DateTime @default(now())
+
+  @@unique([provider, subject])
 }

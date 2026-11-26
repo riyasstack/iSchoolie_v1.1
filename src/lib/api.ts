@@ -15,6 +15,8 @@ export class ApiError extends Error {
 }
 
 export const SESSION_EVENT = "ischoolie:session-expired";
+/** Live mode: a guest (or not-yet-onboarded viewer) tried something that needs an account. */
+export const AUTH_PROMPT_EVENT = "ischoolie:account-required";
 
 export async function api<T>(path: string, init: { method?: string; body?: unknown; signal?: AbortSignal } = {}): Promise<T> {
   const method = init.method ?? "GET";
@@ -46,6 +48,10 @@ export async function api<T>(path: string, init: { method?: string; body?: unkno
     const e = new ApiError(err?.code ?? "INTERNAL", err?.message ?? "Something went wrong. Try again.", res.status, err?.details, err?.requestId);
     if (e.code === "SESSION_EXPIRED" || e.code === "SESSION_REQUIRED") {
       if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent(SESSION_EVENT, { detail: e.code }));
+    }
+    // Prompt only for actions; background reads of account-only data just fail quietly.
+    if ((e.code === "SIGN_UP_REQUIRED" || e.code === "ONBOARDING_REQUIRED") && method !== "GET") {
+      if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent(AUTH_PROMPT_EVENT, { detail: e.code }));
     }
     throw e;
   }

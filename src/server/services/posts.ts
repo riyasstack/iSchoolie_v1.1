@@ -1,5 +1,6 @@
 import { prisma, type Db, type Tx } from "../db";
 import type { RequestContext } from "../context";
+import { isMember } from "../viewer";
 import { AppError, notFound, forbidden, invalid } from "../errors";
 import { rateLimit } from "../ratelimit";
 import { canRepost, postAccess, replyEligibility, type ViewerGraph } from "../policy";
@@ -409,7 +410,7 @@ export async function postDetail(ctx: RequestContext, postId: string, opts: { cu
     : await prisma.post.count({ where: { workspaceId: ws, replyToId: postId, deletedAt: null, hiddenReply: { isNot: null } } });
 
   // Owner insights: record a detail open by someone other than the author (one per day).
-  if (focal.author.id !== g.id && !opts.cursor) {
+  if (focal.author.id !== g.id && !opts.cursor && isMember(ctx)) {
     const day = new Date().toISOString().slice(0, 10);
     await prisma.postEvent.createMany({
       data: [{ workspaceId: ws, postId, actorId: g.id, type: "detail_open", dedupeKey: `open:${postId}:${g.id}:${day}` }],

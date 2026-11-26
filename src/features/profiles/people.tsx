@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { GuestGate } from "@/components/providers";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import clsx from "clsx";
@@ -80,7 +81,7 @@ export function FollowButton({ user, relationship, size = "md", onChange }: { us
   }
   return (
     <>
-      {btn}
+      <GuestGate action={`follow @${user.handle}`}>{btn}</GuestGate>
       <ConfirmDialog
         open={confirm !== null}
         onOpenChange={(o) => !o && setConfirm(null)}
