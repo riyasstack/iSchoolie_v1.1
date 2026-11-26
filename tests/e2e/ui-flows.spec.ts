@@ -268,3 +268,32 @@ test("emoji picker: full set with search, categories and recents", async ({ page
   await page.getByRole("button", { name: "Emoji" }).click();
   await expect(page.getByRole("dialog", { name: "Emoji picker" }).getByRole("tab", { name: "Recent" })).toHaveAttribute("aria-selected", "true");
 });
+
+test("profile photo and header: pick, crop, upload, save, shown on the profile", async ({ page }) => {
+  // Regression: the crop dialog's image URL was revoked by React Strict Mode's effect
+  // re-run, so the image never loaded and Apply stayed disabled.
+  const { PNG } = await import("./fixtures");
+  await openApp(page, "/settings/profile");
+  await expect(page.getByRole("heading", { name: "Edit profile" })).toBeVisible();
+  const session = await api<{ actor: { handle: string } }>(page.request, "GET", "/session");
+
+  for (const [index, kind] of [[0, "header"], [1, "avatar"]] as const) {
+    await page.locator('input[type="file"]').nth(index).setInputFiles({ name: `${kind}.png`, mimeType: "image/png", buffer: PNG });
+    const dialog = page.getByRole("dialog", { name: "Edit media" });
+    await expect(dialog).toBeVisible();
+    await expect.poll(() => dialog.locator("img").evaluate((i: HTMLImageElement) => i.naturalWidth)).toBe(192);
+    await dialog.getByRole("button", { name: "Apply" }).click();
+    await expect(dialog).toHaveCount(0);
+  }
+  await expect(page.getByAltText("Header preview")).toHaveAttribute("src", /\/api\/media\//);
+  await expect(page.getByAltText("Profile photo preview")).toHaveAttribute("src", /\/api\/media\//);
+  await page.getByRole("button", { name: "Save" }).first().click();
+  await expect(page.getByText("Your profile was saved")).toBeVisible();
+
+  const profile = await api<{ avatarUrl: string | null; bannerUrl: string | null }>(page.request, "GET", `/users/${session.actor.handle}`);
+  expect(profile.avatarUrl).toMatch(/\/api\/media\//);
+  expect(profile.bannerUrl).toMatch(/\/api\/media\//);
+  const img = await page.request.get(profile.avatarUrl!);
+  expect(img.ok()).toBe(true);
+  expect(img.headers()["content-type"]).toMatch(/^image\//);
+});

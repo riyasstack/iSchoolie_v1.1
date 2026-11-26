@@ -141,13 +141,22 @@ export function ProfileEditor() {
 }
 
 function CropDialog({ file, aspect, round, onClose, onApply }: { file: File; aspect: number; round: boolean; onClose: () => void; onApply: (b: Blob) => void }) {
-  const [url] = useState(() => URL.createObjectURL(file));
+  // The object URL is created and revoked by the same effect, so React Strict Mode's
+  // mount → cleanup → mount cycle can't leave the <img> pointing at a revoked URL.
+  const [url, setUrl] = useState<string | null>(null);
   const [img, setImg] = useState<HTMLImageElement | null>(null);
+  const [failed, setFailed] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const drag = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
   const frame = useRef<HTMLDivElement>(null);
-  useEffect(() => () => URL.revokeObjectURL(url), [url]);
+  useEffect(() => {
+    const u = URL.createObjectURL(file);
+    setUrl(u);
+    setImg(null);
+    setFailed(false);
+    return () => URL.revokeObjectURL(u);
+  }, [file]);
   const W = 400;
   const H = W / aspect;
   // Base scale covers the frame.
@@ -202,14 +211,23 @@ function CropDialog({ file, aspect, round, onClose, onApply }: { file: File; asp
           tabIndex={0}
           aria-label="Crop area. Drag or use arrow keys to reposition."
         >
+          {url && (
           <img
+            key={url}
             src={url}
             alt=""
             onLoad={(e) => setImg(e.currentTarget)}
+            onError={() => setFailed(true)}
             draggable={false}
             className="absolute left-1/2 top-1/2 max-w-none select-none"
             style={img ? { width: `${((img.naturalWidth * scale) / W) * 100}%`, transform: `translate(calc(-50% + ${(offset.x / W) * 100}cqw), calc(-50% + ${(offset.y / W) * 100}cqw))` } : { visibility: "hidden" }}
           />
+          )}
+          {failed && (
+            <p role="alert" className="absolute inset-0 grid place-items-center px-6 text-center text-sm text-white">
+              This image couldn’t be opened. Try a different JPEG, PNG or WebP file.
+            </p>
+          )}
           {round && <div className="pointer-events-none absolute inset-0 rounded-full shadow-[0_0_0_9999px_rgba(0,0,0,0.5)]" />}
         </div>
         <label className="mt-4 flex items-center gap-3">
