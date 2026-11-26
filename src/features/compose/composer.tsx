@@ -17,6 +17,7 @@ import { useToast } from "@/components/ui/toast";
 import { api, del, get, newClientKey, patch, post, put, uploadFile, errorMessage, ApiError } from "@/lib/api";
 import { parsePostText, POST_MAX, ALT_MAX, POLL_CHOICE_MAX, graphemeLength } from "@/lib/text";
 import { formatInZone } from "@/lib/format";
+import { inspectVideo } from "@/lib/video";
 import { seedPosts, postKey, isPost } from "../posts/cache";
 import { QuotedPost, postPath } from "../posts/post-card";
 import { RichText } from "../posts/rich-text";
@@ -34,7 +35,7 @@ interface Upload {
   media?: MediaDTO;
   error?: string;
   abort?: () => void;
-  meta?: { width?: number; height?: number; durationMs?: number };
+  meta?: { width?: number; height?: number; durationMs?: number; poster?: Blob };
 }
 
 interface PollState {
@@ -256,6 +257,7 @@ export function Composer({ mode, replyToId = null, quoteId = null, draftId: init
       if (up.meta?.durationMs) fields.durationMs = String(up.meta.durationMs);
       const { promise, abort } = uploadFile<MediaDTO>(up.file, fields, (f) =>
         setItems((prev) => prev.map((it, i) => (i === idx ? { ...it, uploads: it.uploads.map((u) => (u.localId === up.localId ? { ...u, progress: f } : u)) } : it))),
+        up.meta?.poster ? { poster: up.meta.poster } : {},
       );
       setItems((prev) => prev.map((it, i) => (i === idx ? { ...it, uploads: it.uploads.map((u) => (u.localId === up.localId ? { ...u, status: "uploading", error: undefined, progress: 0, abort } : u)) } : it)));
       promise
@@ -290,7 +292,7 @@ export function Composer({ mode, replyToId = null, quoteId = null, draftId: init
     for (const f of files) {
       const kind = kindOf(f)!;
       const preview = URL.createObjectURL(f);
-      const meta = kind === "VIDEO" ? await videoMeta(preview) : undefined;
+      const meta = kind === "VIDEO" ? await inspectVideo(f) : undefined;
       const up: Upload = { localId: newClientKey().slice(0, 10), file: f, preview, kind, status: "uploading", progress: 0, meta };
       setItems((prev) => prev.map((x, i) => (i === idx ? { ...x, uploads: [...x.uploads, up] } : x)));
       startUpload(idx, up);
@@ -388,6 +390,10 @@ export function Composer({ mode, replyToId = null, quoteId = null, draftId: init
       if (quoteId) qc.invalidateQueries({ queryKey: postKey(quoteId) });
       const top = created[0];
       toast({ text: replyToId ? "Your reply was sent." : created.length > 1 ? "Your thread was sent." : "Your post was sent.", action: { label: "View", href: postPath(top) } });
+      // Link cards are fetched by the worker; refresh posts with links shortly after.
+      for (const p of created.filter((x) => /https?:\/\/|www\./i.test(x.text) && !x.media.length)) {
+        for (const delay of [3000, 8000]) setTimeout(() => qc.invalidateQueries({ queryKey: postKey(p.id) }), delay);
+      }
       await finish();
     } catch (e) {
       // Recoverable: keep everything in the editor; the same client key is reused on retry.
@@ -632,18 +638,6 @@ export function Composer({ mode, replyToId = null, quoteId = null, draftId: init
   );
 }
 
-async function videoMeta(url: string): Promise<{ width?: number; height?: number; durationMs?: number }> {
-  return new Promise((resolve) => {
-    const v = document.createElement("video");
-    v.preload = "metadata";
-    v.muted = true;
-    const done = () => resolve({ width: v.videoWidth || undefined, height: v.videoHeight || undefined, durationMs: Number.isFinite(v.duration) ? Math.round(v.duration * 1000) : undefined });
-    v.onloadedmetadata = done;
-    v.onerror = () => resolve({});
-    setTimeout(() => resolve({}), 4000);
-    v.src = url;
-  });
-}
 
 // ----------------------------------------------------------------- parts
 function ReplyContext({ p }: { p: PostDTO }) {

@@ -55,6 +55,7 @@ enum MediaScope {
   PROFILE
   LIST
   MOMENT
+  CARD
 }
 
 enum DmPolicy {
@@ -165,6 +166,7 @@ model DemoWorkspace {
   reports          Report[]
   postEvents       PostEvent[]
   idempotency      IdempotencyRecord[]
+  linkPreviews     LinkPreview[]
 
   @@index([kind, expiresAt])
 }
@@ -258,6 +260,8 @@ model User {
   @@unique([workspaceId, id])
   @@unique([workspaceId, handleLower])
   @@index([workspaceId, displayName])
+  @@index([handleLower(ops: raw("gin_trgm_ops"))], type: Gin, map: "User_handleLower_trgm_idx")
+  @@index([displayName(ops: raw("gin_trgm_ops"))], type: Gin, map: "User_displayName_trgm_idx")
 }
 
 model Preferences {
@@ -409,6 +413,9 @@ model Post {
   @@index([workspaceId, replyToId])
   @@index([workspaceId, conversationId])
   @@index([workspaceId, quotedPostId])
+  // Search: substring matching on text and hashtag lookups (pg_trgm / GIN).
+  @@index([textLower(ops: raw("gin_trgm_ops"))], type: Gin, map: "Post_textLower_trgm_idx")
+  @@index([hashtags], type: Gin, map: "Post_hashtags_gin_idx")
 }
 
 model Mention {
@@ -928,4 +935,26 @@ model IdempotencyRecord {
   createdAt   DateTime      @default(now())
 
   @@id([workspaceId, key])
+}
+
+/// Link preview cards, fetched by the worker with SSRF protections and cached per
+/// workspace (so one visitor's links never reveal another's).
+model LinkPreview {
+  id           String        @id @default(cuid())
+  workspaceId  String
+  workspace    DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  /// Normalized URL as it appears in posts.
+  url          String
+  /// "ok" | "failed" | "pending"
+  status       String        @default("pending")
+  finalUrl     String?
+  title        String?
+  description  String?
+  siteName     String?
+  imageMediaId String?
+  error        String?
+  fetchedAt    DateTime?
+  createdAt    DateTime      @default(now())
+
+  @@unique([workspaceId, url])
 }

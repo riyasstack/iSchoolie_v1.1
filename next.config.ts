@@ -10,6 +10,12 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   devIndicators: false,
+  experimental: {
+    // Next's dev MCP endpoint appends forwarded browser console output to
+    // .next/dev/logs/next-development.log. On this setup a restart with an existing log file
+    // made the dev watcher react to each write and reload every open tab in a loop.
+    mcpServer: false,
+  },
   poweredByHeader: false,
   serverExternalPackages: ["sharp", "embedded-postgres", "@prisma/client", "pg"],
   async headers() {

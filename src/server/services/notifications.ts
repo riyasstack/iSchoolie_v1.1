@@ -5,6 +5,7 @@ import { filteredFromNotifications, type ViewerGraph } from "../policy";
 import { loadViewerGraph, toUserDTO, userSelect } from "./graph";
 import { serializePosts } from "./serialize";
 import { dedupeKeys } from "./notify-keys";
+import { publish } from "../realtime";
 import type { NotificationGroupDTO, NotificationKind } from "@/lib/types";
 
 export { dedupeKeys };
@@ -39,10 +40,12 @@ export async function notify(
   if (block) return;
   const pref = PREF_FOR[n.type];
   if (pref && prefs && prefs[pref] === false) return;
-  await db.notification.createMany({
+  const created = await db.notification.createMany({
     data: [{ workspaceId: ws, recipientId: n.recipientId, actorId: n.actorId, type: n.type, postId: n.postId ?? null, dedupeKey: n.dedupeKey }],
     skipDuplicates: true,
   });
+  // Only announce genuinely new events (retries hit the dedupe key and create nothing).
+  if (created.count) await publish(db, { type: "notification", ws, users: [n.recipientId] });
 }
 
 export async function retractNotification(db: Db, ws: string, dedupeKey: string) {

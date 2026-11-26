@@ -24,6 +24,15 @@ import { rateLimit } from "../ratelimit";
 import { loadViewerGraph, toUserDTO, userSelect } from "./graph";
 import { serializePosts, toMediaDTO, mediaSelect } from "./serialize";
 import type { ConversationDTO, MessageDTO } from "@/lib/types";
+import { publish } from "../realtime";
+import type { Db } from "../db";
+
+/** Tells the other active participants (ids only) that something changed. */
+async function announce(db: Db, ctx: RequestContext, conversationId: string, type: "message" | "conversation" | "read", includeSelf = false) {
+  const parts = await db.participant.findMany({ where: { conversationId, leftAt: null }, select: { userId: true } });
+  const users = parts.map((p) => p.userId).filter((u) => includeSelf || u !== ctx.actor.id);
+  await publish(db, { type, ws: ctx.workspace.id, users, conversationId });
+}
 
 const rid = () => crypto.randomUUID().replace(/-/g, "");
 
@@ -153,6 +162,7 @@ export async function markRead(ctx: RequestContext, conversationId: string) {
   const me = await membership(ctx, conversationId);
   if (me.status !== "ACCEPTED") return { ok: true };
   await prisma.participant.update({ where: { conversationId_userId: { conversationId, userId: ctx.actor.id } }, data: { lastReadAt: new Date() } });
+  await announce(prisma, ctx, conversationId, "read");
   return { ok: true };
 }
 
@@ -195,6 +205,7 @@ export async function sendMessage(ctx: RequestContext, conversationId: string, i
       await tx.conversation.update({ where: { id: conversationId }, data: { lastMessageAt: now } });
       // Sending implies the sender accepted (e.g. replying to a request) and has read up to now.
       await tx.participant.update({ where: { conversationId_userId: { conversationId, userId: ctx.actor.id } }, data: { status: "ACCEPTED", lastReadAt: now, draft: "" } });
+      await announce(tx, ctx, conversationId, "message");
     });
   } catch (e) {
     if ((e as { code?: string }).code === "P2002") {
@@ -258,6 +269,7 @@ export async function startConversation(ctx: RequestContext, handles: string[], 
       }
       throw e;
     }
+    await announce(prisma, ctx, cid, "conversation");
     return conversationDTO(ctx, cid);
   }
   const cid = rid();
@@ -270,6 +282,7 @@ export async function startConversation(ctx: RequestContext, handles: string[], 
       ],
     });
     await tx.message.create({ data: { workspaceId: ws, conversationId: cid, senderId: me, kind: "SYSTEM", text: `created the group`, clientKey: `sys-${rid()}` } });
+    await announce(tx, ctx, cid, "message");
   });
   return conversationDTO(ctx, cid);
 }
@@ -295,6 +308,7 @@ export async function updateConversation(ctx: RequestContext, conversationId: st
       prisma.conversation.update({ where: { id: conversationId }, data: { name } }),
       prisma.message.create({ data: { workspaceId: ctx.workspace.id, conversationId, senderId: ctx.actor.id, kind: "SYSTEM", text: name ? `renamed the group to “${name}”` : "removed the group name", clientKey: `sys-${rid()}` } }),
     ]);
+    await announce(prisma, ctx, conversationId, "message");
   }
   if (patch.muted !== undefined || patch.draft !== undefined) {
     await prisma.participant.update({
@@ -321,6 +335,7 @@ export async function addMembers(ctx: RequestContext, conversationId: string, ha
       if (existing) await tx.participant.update({ where: { conversationId_userId: { conversationId, userId: u.id } }, data: { leftAt: null, joinedAt: new Date(), status: "ACCEPTED", role: "MEMBER" } });
       else await tx.participant.create({ data: { workspaceId: ws, conversationId, userId: u.id, role: "MEMBER", status: "ACCEPTED", lastReadAt: new Date(0) } });
       await tx.message.create({ data: { workspaceId: ws, conversationId, senderId: ctx.actor.id, kind: "SYSTEM", text: `added @${u.handle}`, clientKey: `sys-${rid()}` } });
+      await announce(tx, ctx, conversationId, "message");
     });
   }
   return conversationDTO(ctx, conversationId);
@@ -336,6 +351,8 @@ export async function removeMember(ctx: RequestContext, conversationId: string, 
     prisma.participant.updateMany({ where: { conversationId, userId: u.id, leftAt: null }, data: { leftAt: new Date() } }),
     prisma.message.create({ data: { workspaceId: ctx.workspace.id, conversationId, senderId: ctx.actor.id, kind: "SYSTEM", text: `removed @${u.handle}`, clientKey: `sys-${rid()}` } }),
   ]);
+  await announce(prisma, ctx, conversationId, "message");
+  await publish(prisma, { type: "conversation", ws: ctx.workspace.id, users: [u.id], conversationId });
   return conversationDTO(ctx, conversationId);
 }
 
@@ -351,6 +368,7 @@ export async function leaveConversation(ctx: RequestContext, conversationId: str
         const next = await tx.participant.findFirst({ where: { conversationId, leftAt: null, userId: { not: ctx.actor.id } }, orderBy: { joinedAt: "asc" } });
         if (next) await tx.participant.update({ where: { conversationId_userId: { conversationId, userId: next.userId } }, data: { role: "ADMIN" } });
       }
+      await announce(tx, ctx, conversationId, "message");
     });
   } else {
     await prisma.participant.update({ where: { conversationId_userId: { conversationId, userId: ctx.actor.id } }, data: { hiddenBefore: new Date() } });
@@ -379,6 +397,7 @@ export async function setReaction(ctx: RequestContext, messageId: string, emoji:
       create: { workspaceId: ctx.workspace.id, messageId, userId: ctx.actor.id, emoji },
       update: { emoji },
     });
+  await announce(prisma, ctx, m.conversationId, "conversation");
   return (await messageById(ctx, messageId))!;
 }
 

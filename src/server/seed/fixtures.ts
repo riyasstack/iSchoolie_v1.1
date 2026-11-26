@@ -369,7 +369,7 @@ export const SEED_CONVERSATIONS: SeedConversation[] = [
     messages: [
       { from: "robotics_club", text: "Welcome to the Bolt build team chat! Use this for competition logistics.", ago: 3 * D },
       { from: "zara_designs", text: "I'll design the team badge. Blue and white?", ago: 3 * D - 60 },
-      { from: "maya_learns", text: "Blue and white! Matches Bolt.", ago: 3 * D - 55 },
+      { from: "maya_learns", text: "Blue and white! Matches Bolt.", ago: 3 * D - 65 },
       { from: "amir_codes", text: "I pushed the new motor controller code. Please don't let Bolt near the stairs.", ago: 1 * D },
       { from: "robotics_club", text: "Photo from today's session", ago: 6 * H, media: { photo: "robot.jpg", alt: "Illustration of Bolt the blue robot." } },
       { from: "zara_designs", text: "He looks so proud", ago: 5 * H + 50, react: [["maya_learns", "❤️"], ["amir_codes", "❤️"]] },

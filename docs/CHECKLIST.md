@@ -3,8 +3,9 @@
 Legend — **A**: verified by an automated test (named) · **V**: verified visually in the
 browser / screenshots · **I**: implemented, not separately verified · **D**: deferred / not implemented.
 
-Test files: `tests/unit/*` (Vitest), `tests/integration/services.test.ts` (Vitest against
-`ischoolie_test`), `tests/e2e/*.spec.ts` (Playwright, Chromium). Screenshots: `docs/screenshots/`.
+Test files: `tests/unit/*` (Vitest), `tests/integration/services.test.ts` and
+`tests/integration/coverage.test.ts` ("coverage"; Vitest against `ischoolie_test`),
+`tests/e2e/*.spec.ts` incl. `ui-flows.spec.ts` ("ui-flows"; Playwright, Chromium). Screenshots: `docs/screenshots/`.
 
 ## Screens and routes
 
@@ -12,32 +13,32 @@ Test files: `tests/unit/*` (Vitest), `tests/integration/services.test.ts` (Vites
 |---|---|---|---|
 | Entry / Home | `/` → `/home` | A, V | e2e 1, 13; `home-1280.png`, `home-390.png`, theme-*.png |
 | Home / Latest switch | ✦ menu, persisted pref | A (service), V | integration "posting"; manual |
-| Inline composer, new-post pill | `/home` | A (composer), I (pill) | e2e 1; pill polls `/api/timeline/new` |
+| Inline composer, new-post pill | `/home` | A | e2e 1; ui-flows (pill appears after another account posts) |
 | Explore | `/explore?tab=…` | V, A (deep link) | `explore-*.png`; e2e 13 |
 | Search | `/search?q&f=top/live/user/image/video` | A | integration (protected exclusion, block), e2e 2/5/7/12 |
 | Advanced search | `/search-advanced` | A (parser), I (form) | unit search-and-time |
 | Post detail | `/:handle/status/:id` (ancestors, replies, continuation via "Replying to") | A, V | e2e 1/2/5; `post-detail-*.png` |
 | Hidden replies | `/:handle/status/:id/hidden` | A | integration "hide replies" |
-| Engagement lists | `/…/likes`, `/…/reposts`, `/…/quotes` | I | routes load; service shared with tests |
+| Engagement lists | `/…/likes`, `/…/reposts`, `/…/quotes` | A | ui-flows; coverage (counts match rows, protected lists refused) |
 | Media viewer | `/…/photo/:n`, `/…/video/:n` (modal + direct load) | A | e2e 6, 13 |
 | Composer | `/compose/post` (`?reply`, `?quote`, `?draft`, `?scheduled`) | A, V | e2e 1/2/6/14, mobile; `composer-*.png` |
 | Drafts / Scheduled | `/compose/drafts`, `/compose/scheduled` | A | e2e 7; integration scheduling |
 | Notifications | `/notifications`, `/notifications/mentions` | A, V | integration (prefs), e2e 13; `notifications-*.png` |
 | Messages inbox / conversation | `/messages`, `/messages/:id` (split view ≥ 1002 px) | A, V | e2e 10, mobile; `messages-*.png` |
 | New message / requests | `/messages/compose`, `/messages/requests` | A (service) | integration "messages" |
-| Conversation info | `/messages/:id/info` | I | rename/mute/leave/add/remove services covered in part |
+| Conversation info | `/messages/:id/info` | A | ui-flows (rename, snooze); coverage (add, admin-only remove, leave hand-off) |
 | Bookmarks | `/i/bookmarks` | A, V | e2e 2; `bookmarks-*.png` |
 | Lists | `/i/lists`, `/i/lists/:id`, `/create`, `/:id/edit`, `/:id/members`, `/:id/followers`, `/:handle/lists`, `/:handle/lists/memberships` | A, V | e2e 8; integration lists; `lists-*.png` |
-| Topics | `/i/topics`, `/i/topics/:slug` | I | Home ranking uses follows (code + help docs) |
+| Topics | `/i/topics`, `/i/topics/:slug` | A | ui-flows; coverage (follow adds labelled topic posts to Home, unfollow removes) |
 | Moments | `/i/moments`, `/:id`, `/create`, `/:id/edit` | A | e2e 9; integration moments |
 | Profiles | `/:handle`, `/with_replies`, `/media`, `/likes` | A, V | e2e 1/3/4/6; `profile-*.png` |
 | Connections | `/:handle/followers`, `/:handle/following` (search, pagination) | A (privacy) | integration protected |
 | Follow requests | `/i/follower_requests` (received + sent) | A | e2e 4 |
 | Profile edit | `/settings/profile` (crop, upload, validation) | A | e2e 11 |
-| Discovery | `/i/connect` | I | suggestion policy documented |
+| Discovery | `/i/connect` | A | ui-flows; coverage (excludes self, followed, blocked, muted, suspended) |
 | Settings | `/settings/*` (account, privacy, notifications, content, display, accessibility, data, demo, muted words, blocked, muted) | A, V | e2e 11/12; integration prefs; `settings-*.png` |
 | Help, shortcuts, display dialogs | `/help`, `/i/keyboard_shortcuts`, `/i/display` (modal + direct) | A | e2e 13, 17 |
-| Post activity (owner) | dialog from own post | I | computed from Like/Repost/Post/Bookmark/PostEvent rows |
+| Post activity (owner) | dialog from own post | A | ui-flows; coverage (owner-only, counts match rows, one detail open per viewer per day) |
 | System states | not-found, error boundary, `/offline`, session-expired recovery | V | session-expired recovery exercised manually |
 
 ## Actions
@@ -48,34 +49,45 @@ Test files: `tests/unit/*` (Vitest), `tests/integration/services.test.ts` (Vites
 | Reply (audience enforced server-side) | A | integration "reply audience" |
 | Quote | A | e2e 2 |
 | Like/unlike, repost/undo, bookmark/unbookmark, counts in sync | A | e2e 2; integration |
-| Copy link, share via message, native share | I | menu implemented |
+| Share via message | A | ui-flows; coverage (unseeable posts refused) |
+| Copy link, native share | A | ui-flows (clipboard contents and share payload checked) |
 | Pin/unpin own post; forged pin/delete refused | A | integration forged edit |
-| Delete own post (tombstones) | A (tombstone seed), I | |
+| Delete own post (tombstones, pin cleared) | A | ui-flows; coverage |
 | Hide/unhide reply | A | integration |
-| Mute conversation | I | suppresses REPLY/MENTION/LIKE/REPOST notifications |
-| Report (category, details, receipt; no decision claimed) | I | dialog + `Report` rows |
+| Mute conversation | A | ui-flows; coverage (reply notifications stop, resume after unmute) |
+| Report (category, details, receipt; no decision claimed) | A | ui-flows; coverage (persisted, target validated) |
 | Follow/unfollow, protected request/accept/reject/cancel | A | e2e 3/4; integration |
-| Profile post notifications (bell) | I | `SUBSCRIBED_POST` generation |
+| Profile post notifications (bell) | A | coverage (subscribers only; requires following) |
 | Block / mute (feeds, search, notifications, interactions) | A | e2e 12; integration |
 | Muted words with scope and duration | A | integration |
 | Polls: vote once, closed polls, author can't vote | A | e2e 5; integration |
-| Uploads: progress, cancel, retry, alt text, failure states | A (upload + alt + failure path seen) | e2e 6 |
-| GIF picker (bundled, labelled) | I | |
+| Uploads: progress, cancel, retry, alt text, failure states | A | e2e 6; coverage (re-encode, content sniffing, scope rules, owner-only, video byte ranges) |
+| GIF picker (bundled, labelled) | A | ui-flows; coverage |
 | Drafts autosave/resume/discard, reload recovery | A (server draft + resume) | e2e 7 |
 | Scheduling with time zone, worker publication, no duplicates, reschedule/cancel | A | integration scheduling; e2e 7 |
-| DMs: send, history, read state, requests, groups, reactions, delete-for-me, idempotent send | A (send/read/request/idempotency/groups) | e2e 10; integration |
+| DMs: send, history, read state, requests, groups, reactions, delete-for-me, idempotent send | A | e2e 10; ui-flows; integration + coverage |
 | Settings with observable effects (theme, autoplay, notifications, muted words, DM policy) | A | e2e 11; integration |
 | Keyboard navigation and shortcuts | A | e2e 17 |
+| Realtime messages and badges (LISTEN/NOTIFY → SSE, polling fallback) | A | realtime integration (delivery after commit, ids only, no duplicate events); ui-flows (message from another process appeared in 0.96 s) |
+| Link preview cards with SSRF-safe fetching | A | link-preview unit + integration (address policy, rebinding, redirects, size/type limits, parsing, storage, rendering); verified once against a real public page (example.com) |
+| Video poster frames | A | coverage (stored, re-encoded, bad poster tolerated); ui-flows (captured in Chromium from a real WebM) |
+| S3-compatible storage adapter | A (against a test server) | storage-contract (same suite as local); **not run against real AWS S3 / R2 / MinIO** |
+| Full emoji picker (search, categories, recents) | A | ui-flows |
+| Indexed search (pg_trgm, GIN) | A | migration applied; query plan uses `Post_textLower_trgm_idx` |
 | Responsive 320–1920, no horizontal overflow | A | e2e 18 (10 screens × 9 widths) |
 | Session isolation, forged ids, CSRF, private media | A | e2e security; integration isolation |
 | Failed mutation rollback; offline error keeps content | A | e2e 14 |
 
-## Deferred / not implemented
+## Not done, and why
 
-- External link preview cards (no outbound fetching → no SSRF surface).
-- Video transcoding and server-side video thumbnails (uploaded videos play as uploaded).
-- Production object-storage adapter (contract documented; `local` driver only).
-- Push and email notification delivery (shown as unavailable).
-- WebSocket realtime (documented polling instead).
-- Full emoji catalogue (curated picker set) and external GIF provider (bundled set).
-- Pixel comparison against dated screenshots (none supplied).
+- **Push and email notification delivery** — needs a delivery provider and verified contact
+  details, which only exist after real sign-in. Shown as unavailable; nothing claims delivery.
+- **External GIF provider** — needs an API key and agreeing to the provider's terms. The picker
+  uses a clearly labelled bundled set.
+- **Server-side video transcoding** — not needed for playback of uploaded MP4/WebM; posters
+  are captured in the browser instead.
+- **S3 adapter against real cloud storage** — implemented and contract-tested against a local
+  S3-compatible server only.
+- **Pixel comparison against dated 2020 screenshots** — none were supplied.
+- **Real authentication and public launch** — out of scope for this phase by the brief
+  (see AUTH_INTEGRATION.md).

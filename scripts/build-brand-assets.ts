@@ -12,7 +12,7 @@
  *    backgrounds (the whole logo is never inverted).
  */
 import sharp from "sharp";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 
 const MASTER = "assets/brand/ischoolie-logo-master-1280.png";
 const OUT = "public/brand";
@@ -104,6 +104,29 @@ async function main() {
     .toFile("src/app/apple-icon.png");
   await sharp(square).resize(192, 192, { fit: "contain", background: { r: 255, g: 255, b: 255, alpha: 1 } }).flatten({ background: "#ffffff" }).png().toFile(`${OUT}/icon-192.png`);
   await sharp(square).resize(512, 512, { fit: "contain", background: { r: 255, g: 255, b: 255, alpha: 1 } }).flatten({ background: "#ffffff" }).png().toFile(`${OUT}/icon-512.png`);
+
+  // favicon.ico: an ICO container holding 16/32/48 px PNGs of the symbol crop.
+  const sizes = [16, 32, 48];
+  const pngs = await Promise.all(sizes.map((s) => sharp(square).resize(s, s, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } }).png().toBuffer()));
+  const header = Buffer.alloc(6);
+  header.writeUInt16LE(0, 0);
+  header.writeUInt16LE(1, 2); // type: icon
+  header.writeUInt16LE(sizes.length, 4);
+  const dir = Buffer.alloc(16 * sizes.length);
+  let offset = 6 + dir.length;
+  sizes.forEach((s, i) => {
+    const e = i * 16;
+    dir.writeUInt8(s, e);
+    dir.writeUInt8(s, e + 1);
+    dir.writeUInt8(0, e + 2);
+    dir.writeUInt8(0, e + 3);
+    dir.writeUInt16LE(1, e + 4); // color planes
+    dir.writeUInt16LE(32, e + 6); // bits per pixel
+    dir.writeUInt32LE(pngs[i].length, e + 8);
+    dir.writeUInt32LE(offset, e + 12);
+    offset += pngs[i].length;
+  });
+  writeFileSync("src/app/favicon.ico", Buffer.concat([header, dir, ...pngs]));
 
   const full = await sharp(`${OUT}/ischoolie-logo.png`).metadata();
   console.log(`logo ${full.width}x${full.height}, symbol ${side}x${side}`);

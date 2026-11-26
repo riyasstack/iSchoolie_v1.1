@@ -40,7 +40,7 @@ function sniff(buf: Buffer): { kind: "IMAGE" | "GIF" | "VIDEO"; mime: string } |
 export async function upload(
   ctx: RequestContext,
   file: File,
-  opts: { scope: string; alt?: string; width?: number; height?: number; durationMs?: number },
+  opts: { scope: string; alt?: string; width?: number; height?: number; durationMs?: number; poster?: File },
 ) {
   await rateLimit(`upload:${ctx.actor.id}`, 60, 600, "Too many uploads. Try again in a few minutes.");
   if (!SCOPES.includes(opts.scope as Scope)) throw invalid("Unknown upload purpose.");
@@ -102,6 +102,22 @@ export async function upload(
       const clamp = (n: number | undefined) => (n && Number.isFinite(n) && n > 0 && n <= 8192 ? Math.round(n) : null);
       width = clamp(opts.width);
       height = clamp(opts.height);
+      // Poster frame captured by the browser; re-encoded like any image (optional).
+      if (opts.poster && opts.poster.size <= LIMITS.IMAGE) {
+        try {
+          const p = await sharp(Buffer.from(await opts.poster.arrayBuffer()), { failOn: "error", limitInputPixels: 50_000_000 })
+            .rotate()
+            .resize({ width: 1280, height: 1280, fit: "inside", withoutEnlargement: true })
+            .jpeg({ quality: 80 })
+            .toBuffer({ resolveWithObject: true });
+          thumbKey = `${base}_poster.jpg`;
+          await storage().put(thumbKey, p.data);
+          width = width ?? p.info.width;
+          height = height ?? p.info.height;
+        } catch {
+          thumbKey = null; // an unreadable poster never blocks the video upload
+        }
+      }
     }
   } catch (e) {
     if (e instanceof AppError) throw e;
@@ -171,6 +187,8 @@ export async function serveMedia(ctx: RequestContext, id: string, variant: strin
     const post = m.postLinks[0].post;
     if (postAccess(g, post) !== "ok") throw notFound("That file");
     if (post.author.isProtected) cache = "private, no-store";
+  } else if (m.scope === "CARD") {
+    // Link-card images are re-encoded copies of public web images; visible within the workspace.
   } else if (m.scope === "PROFILE" || m.scope === "LIST" || m.scope === "MOMENT") {
     // Profile/list/moment images are visible within the workspace, except across blocks.
     if (m.ownerId !== ctx.actor.id && authorAccess(g, { id: m.ownerId, isProtected: false, suspended: false }) === "blocked_by") throw notFound("That file");

@@ -75,11 +75,14 @@ Open http://localhost:3000 — you land directly on a populated Home feed.
 - `db:start` runs a real PostgreSQL 17 (embedded-postgres) on port 54329 with data in
   `.data/postgres`, UTF-8, sessions pinned to UTC. To use your own server, set
   `DATABASE_URL` and skip `db:start`.
-- The **worker** publishes scheduled posts and deletes expired demo workspaces. Without
-  it, scheduled posts stay pending.
+- The **worker** publishes scheduled posts, fetches link preview cards and deletes expired
+  demo workspaces. Without it, scheduled posts stay pending and links show no card.
 - Uploaded media is stored under `.data/storage` (survives restarts).
 
 ## Production build
+
+Stop `npm run dev` first: `next build` cleans `.next`, including the running dev
+server's cache, which can leave the dev server stuck reloading. Restart it if that happens.
 
 ```powershell
 npm run build
@@ -132,7 +135,8 @@ npm run test:e2e
 
 See [.env.example](.env.example): `APP_MODE`, `DATABASE_URL`, `EMBEDDED_PG_PORT`,
 `SESSION_SECRET`, `DEMO_RETENTION_DAYS`, `DEMO_PROVISION_LIMIT_PER_HOUR`, `STORAGE_DRIVER`,
-`STORAGE_DIR`, `FORCE_SECURE_COOKIES`. Secrets never reach the browser bundle.
+`STORAGE_DIR`, `FORCE_SECURE_COOKIES`, and `S3_*` for `STORAGE_DRIVER=s3` (AWS S3, R2 or
+MinIO). Secrets never reach the browser bundle.
 
 ## Demo controls
 
@@ -142,7 +146,7 @@ They don't exist in live mode.
 
 ## Public-release requirements (not done here)
 
-Real authentication (see AUTH_INTEGRATION.md), an object-storage adapter, video
-processing, a staffed moderation workflow for reports, push/email delivery services,
-scale work (full-text search, counters, caching), trusted-proxy configuration for IP rate
+Real authentication (see AUTH_INTEGRATION.md), running the S3 adapter against your real
+bucket, a staffed moderation workflow for reports, push/email delivery services (after
+sign-in exists), scale work (counters, caching), trusted-proxy configuration for IP rate
 limits, and a security review. Do not deploy publicly as-is.

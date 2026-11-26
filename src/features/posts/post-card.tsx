@@ -19,7 +19,7 @@ import { isPost, usePost, useToggle, useVote, useDeletePost, usePostAction, type
 import { useDialogs } from "../dialogs";
 import { ProfileHoverCard } from "../profiles/hover-card";
 import { useQueryClient } from "@tanstack/react-query";
-import type { EntryContext, PostDTO, UnavailableDTO } from "@/lib/types";
+import type { EntryContext, LinkCardDTO, PostDTO, UnavailableDTO } from "@/lib/types";
 
 export function postPath(p: Pick<PostDTO, "id" | "author">) {
   return `/${p.author.handle}/status/${p.id}`;
@@ -206,7 +206,34 @@ export function PostAttachments({ p, large }: { p: PostDTO; large?: boolean }) {
         ))}
       {p.poll && <PollView p={p} />}
       {p.quoted && <QuotedPost quoted={p.quoted} />}
+      {p.card && <LinkCard card={p.card} />}
     </>
+  );
+}
+
+/** Link preview card (legacy summary / large-image layout). */
+export function LinkCard({ card }: { card: LinkCardDTO }) {
+  const large = !!card.imageUrl;
+  return (
+    <a
+      href={card.url}
+      target="_blank"
+      rel="noopener noreferrer nofollow ugc"
+      onClick={(e) => e.stopPropagation()}
+      className={clsx("mt-3 flex overflow-hidden rounded-card border border-line-strong transition-colors hover:bg-hover", large ? "flex-col" : "flex-row")}
+      aria-label={`Link: ${card.title ?? card.url}`}
+    >
+      {card.imageUrl && (
+        <span className="block aspect-[1.91/1] w-full overflow-hidden border-b border-line bg-subtle">
+          <img src={card.imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
+        </span>
+      )}
+      <span className="min-w-0 px-3 py-2.5">
+        <span className="block truncate text-fg2">{card.siteName}</span>
+        {card.title && <span className="block truncate">{card.title}</span>}
+        {card.description && <span className="line-clamp-2 block text-fg2">{card.description}</span>}
+      </span>
+    </a>
   );
 }
 

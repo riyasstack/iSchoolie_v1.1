@@ -6,6 +6,7 @@ import { AppError } from "./errors";
 import { prisma } from "./db";
 import { env } from "./env";
 import { SESSION_COOKIE } from "@/lib/session-token";
+import { sseResponse } from "./realtime";
 import * as S from "./services/workspace";
 import * as P from "./services/posts";
 import * as T from "./services/timelines";
@@ -90,6 +91,7 @@ export const routes: RouteDef[] = [
   },
   { method: "GET", pattern: "/session", handler: ({ ctx }) => A.getSession(ctx) },
   { method: "GET", pattern: "/session/badges", handler: ({ ctx }) => A.badges(ctx) },
+  { method: "GET", pattern: "/stream", handler: async ({ ctx, req }) => sseResponse(ctx.actor.id, ctx.workspace.id, req.signal) },
   { method: "GET", pattern: "/session/identities", handler: ({ ctx }) => U.demoIdentities(ctx) },
   {
     method: "POST",
@@ -298,7 +300,8 @@ export const routes: RouteDef[] = [
       const file = form.get("file");
       if (!(file instanceof File)) throw new AppError("VALIDATION", "Choose a file to upload.");
       const num = (k: string) => (form.get(k) ? Number(form.get(k)) : undefined);
-      return Media.upload(ctx, file, { scope: String(form.get("scope") ?? "POST"), alt: String(form.get("alt") ?? ""), width: num("width"), height: num("height"), durationMs: num("durationMs") });
+      const poster = form.get("poster");
+      return Media.upload(ctx, file, { scope: String(form.get("scope") ?? "POST"), alt: String(form.get("alt") ?? ""), width: num("width"), height: num("height"), durationMs: num("durationMs"), poster: poster instanceof File ? poster : undefined });
     },
   },
   { method: "GET", pattern: "/media/:id", handler: ({ ctx, params, url, req }) => Media.serveMedia(ctx, idSchema.parse(params.id), url.searchParams.get("v"), req.headers.get("range")) },

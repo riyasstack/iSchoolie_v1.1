@@ -4,8 +4,9 @@
  */
 import type { Db } from "../db";
 import type { RequestContext } from "../context";
-import { postAccess, replyEligibility, canRepost, type ViewerGraph } from "../policy";
+import { postAccess, replyEligibility, type ViewerGraph } from "../policy";
 import { mediaUrl, toUserDTO, userSelect } from "./graph";
+import { firstLink } from "./link-preview";
 import type { MediaDTO, PollDTO, PostDTO, UnavailableDTO } from "@/lib/types";
 
 type MediaRow = {
@@ -108,6 +109,18 @@ export async function serializePosts(
     : [];
   const rootFollowsViewer = new Set(rootFollows.map((f) => f.followerId));
 
+  // Link cards for posts with no media, poll or quote.
+  const linkOf = new Map<string, string>();
+  for (const r of visible) {
+    if (r.media.length || r.poll || r.quotedPostId) continue;
+    const l = firstLink(r.text);
+    if (l) linkOf.set(r.id, l);
+  }
+  const previews = linkOf.size
+    ? await db.linkPreview.findMany({ where: { workspaceId: ws, url: { in: Array.from(new Set(linkOf.values())) }, status: "ok" } })
+    : [];
+  const previewByUrl = new Map(previews.map((p) => [p.url, p]));
+
   const now = Date.now();
   for (const id of unique) {
     const r = byId.get(id);
@@ -172,6 +185,10 @@ export async function serializePosts(
       media: r.media.map((pm) => toMediaDTO(pm.media)),
       poll,
       quoted: r.quotedPostId ? (depth === 0 ? quotedMap.get(r.quotedPostId) ?? { id: r.quotedPostId, unavailable: "not_found" } : { id: r.quotedPostId, unavailable: "not_found" }) : null,
+      card: (() => {
+        const p = previewByUrl.get(linkOf.get(r.id) ?? "");
+        return p ? { url: p.url, finalUrl: p.finalUrl ?? p.url, title: p.title, description: p.description, siteName: p.siteName, imageUrl: mediaUrl(p.imageMediaId) } : null;
+      })(),
       counts: {
         replies: replyC.get(r.id) ?? 0,
         reposts: repostC.get(r.id) ?? 0,
@@ -194,9 +211,6 @@ export async function serializePosts(
       pinned: false,
       hidden: !!r.hiddenReply,
     };
-    if (!canRepost(g, r.author)) {
-      // Surface the reason on the client via the author's protected flag.
-    }
     out.set(id, dto);
   }
   // Pinned flags (author.pinnedPostId) in one query.

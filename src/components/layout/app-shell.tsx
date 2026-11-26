@@ -14,6 +14,7 @@ import { compactCount } from "@/lib/format";
 import { DialogsProvider } from "@/features/dialogs";
 import { DemoControlsProvider, useDemoControls } from "@/features/demo-controls";
 import { KeyboardShortcuts } from "@/features/shortcuts";
+import { RealtimeBridge } from "@/features/realtime";
 import { SearchBox } from "@/features/search/search-box";
 import { FollowButton } from "@/features/profiles/people";
 import type { ProfileDTO, TrendDTO, UserListItem } from "@/lib/types";
@@ -70,6 +71,7 @@ export function AppShell({ children, modal }: { children: ReactNode; modal?: Rea
           <BottomNav />
           <MobileDrawer open={drawer} onOpenChange={setDrawer} />
           <KeyboardShortcuts />
+          <RealtimeBridge />
           {modal}
         </DrawerCtx.Provider>
       </DialogsProvider>

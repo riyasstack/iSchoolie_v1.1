@@ -59,6 +59,15 @@ export interface MediaDTO {
   mime: string;
 }
 
+export interface LinkCardDTO {
+  url: string;
+  finalUrl: string;
+  title: string | null;
+  description: string | null;
+  siteName: string | null;
+  imageUrl: string | null;
+}
+
 export interface PollDTO {
   id: string;
   options: { id: string; label: string; votes: number }[];
@@ -90,6 +99,8 @@ export interface PostDTO {
   media: MediaDTO[];
   poll: PollDTO | null;
   quoted: PostDTO | UnavailableDTO | null;
+  /** Link preview card for the first URL (only when the post has no media, poll or quote). */
+  card: LinkCardDTO | null;
   counts: { replies: number; reposts: number; quotes: number; likes: number };
   viewer: {
     liked: boolean;

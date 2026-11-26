@@ -3,13 +3,13 @@
  *
  * - "local" (development/demo): files under STORAGE_DIR, which survives restarts.
  *   Keys starting with "seed/" resolve read-only to assets/seed (shared fictional seed media).
- * - Production: implement the same interface against an S3-compatible bucket
- *   (put/get/delete with private ACLs; delivery stays behind /api/media/:id so
- *   authorization runs on every read). See docs/ARCHITECTURE.md.
+ * - "s3": any S3-compatible bucket (./s3.ts). Objects stay private; delivery stays behind
+ *   /api/media/:id so authorization runs on every read.
  */
 import { createReadStream, promises as fs } from "node:fs";
 import path from "node:path";
 import { env } from "../env";
+import { createS3Storage, s3ConfigFromEnv } from "./s3";
 
 export interface StoredObject {
   size: number;
@@ -23,12 +23,14 @@ export interface StorageAdapter {
   deletePrefix(prefix: string): Promise<void>;
 }
 
-const SEED_DIR = path.resolve("assets/seed");
+// Runtime data directories: excluded from build output tracing (they're read at runtime,
+// not bundled), so the build doesn't trace the whole project.
+const SEED_DIR = path.join(/* turbopackIgnore: true */ process.cwd(), "assets", "seed");
 
 function resolveKey(key: string): string {
   if (key.includes("..") || path.isAbsolute(key)) throw new Error("invalid storage key");
   if (key.startsWith("seed/")) return path.join(SEED_DIR, key.slice(5));
-  return path.join(path.resolve(env.storageDir), key);
+  return path.join(path.resolve(/* turbopackIgnore: true */ process.cwd(), env.storageDir), key);
 }
 
 function nodeToWeb(stream: NodeJS.ReadableStream): ReadableStream<Uint8Array> {
@@ -75,9 +77,12 @@ export const localStorage: StorageAdapter = {
   },
 };
 
+let s3Adapter: StorageAdapter | null = null;
+
 export function storage(): StorageAdapter {
   const driver = process.env.STORAGE_DRIVER ?? "local";
   if (driver === "local") return localStorage;
+  if (driver === "s3") return (s3Adapter ??= createS3Storage(s3ConfigFromEnv(), localStorage));
   // No silent fallback to another backend.
-  throw new Error(`STORAGE_DRIVER "${driver}" is not configured in this build. See docs/ARCHITECTURE.md.`);
+  throw new Error(`Unknown STORAGE_DRIVER "${driver}" (use "local" or "s3").`);
 }

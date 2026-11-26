@@ -63,12 +63,14 @@ export function uploadFile<T>(
   file: Blob,
   fields: Record<string, string>,
   onProgress: (fraction: number) => void,
+  extraFiles: Record<string, Blob> = {},
 ): { promise: Promise<T>; abort: () => void } {
   const xhr = new XMLHttpRequest();
   const promise = new Promise<T>((resolve, reject) => {
     const form = new FormData();
     form.append("file", file, (file as File).name ?? "upload");
     for (const [k, v] of Object.entries(fields)) form.append(k, v);
+    for (const [k, b] of Object.entries(extraFiles)) form.append(k, b, `${k}.jpg`);
     xhr.open("POST", "/api/media");
     xhr.setRequestHeader("x-ischoolie-csrf", "1");
     xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(e.loaded / e.total);

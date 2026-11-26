@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { get, post, ApiError, SESSION_EVENT } from "@/lib/api";
 import type { PreferencesDTO, SessionDTO } from "@/lib/types";
 import { ToastProvider } from "./ui/toast";
+import { useRealtimeConnected } from "@/features/realtime";
 import { Dialog, DialogBody, DialogFooter } from "./ui/dialog";
 import { Button } from "./ui/button";
 
@@ -62,12 +63,14 @@ export function SessionGate({ children }: { children: ReactNode }) {
   const [expired, setExpired] = useState(false);
   const [restarting, setRestarting] = useState(false);
   const [restartError, setRestartError] = useState<string | null>(null);
+  const realtime = useRealtimeConnected();
   const session = useQuery({ queryKey: ["session"], queryFn: () => get<SessionDTO>("/session"), staleTime: 60_000 });
   const badges = useQuery({
     queryKey: ["badges"],
     queryFn: () => get<SessionDTO["badges"]>("/session/badges"),
     enabled: !!session.data,
-    refetchInterval: () => (typeof document !== "undefined" && document.visibilityState === "visible" ? 30_000 : false),
+    // Realtime events invalidate badges immediately; polling is only a fallback.
+    refetchInterval: () => (typeof document !== "undefined" && document.visibilityState === "visible" ? (realtime ? 120_000 : 30_000) : false),
   });
 
   useEffect(() => {

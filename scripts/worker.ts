@@ -14,6 +14,7 @@ import os from "node:os";
 import { prisma } from "../src/server/db";
 import { publishScheduled } from "../src/server/services/compose";
 import { cleanupExpiredWorkspaces } from "../src/server/services/workspace";
+import { fetchAndStorePreview } from "../src/server/services/link-preview";
 import { log } from "../src/server/log";
 
 const WORKER_ID = `${os.hostname()}:${process.pid}`;
@@ -54,6 +55,9 @@ async function run(job: JobRow) {
     if (job.type === "publish_scheduled") {
       const p = job.payload as { scheduledPostId: string; scheduledFor: string };
       outcome = await publishScheduled(p.scheduledPostId, p.scheduledFor);
+    } else if (job.type === "link_preview") {
+      const p = job.payload as { workspaceId: string; url: string; requestedBy: string };
+      outcome = await fetchAndStorePreview(p.workspaceId, p.url, p.requestedBy);
     } else if (job.type === "cleanup_workspaces") {
       const n = await cleanupExpiredWorkspaces();
       outcome = `deleted ${n}`;

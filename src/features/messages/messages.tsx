@@ -19,10 +19,14 @@ import { QuotedPost } from "../posts/post-card";
 import { GifPlayer, VideoPlayer } from "../posts/post-media";
 import { EmojiPicker, GifPicker } from "../compose/pickers";
 import { useDialogs } from "../dialogs";
+import { REALTIME_EVENT, useRealtimeConnected } from "../realtime";
+import { inspectVideo } from "@/lib/video";
 import type { ConversationDTO, MediaDTO, MessageDTO, UserDTO } from "@/lib/types";
 
 const INBOX_POLL_MS = 15_000;
+const INBOX_POLL_FALLBACK_MS = 60_000;
 const THREAD_POLL_MS = 4_000;
+const THREAD_POLL_FALLBACK_MS = 30_000;
 
 function useVisible() {
   const [v, setV] = useState(true);
@@ -79,11 +83,12 @@ export function SelectConversation() {
 }
 
 function Inbox() {
+  const realtime = useRealtimeConnected();
   const s = useSession();
   const pathname = usePathname();
   const visible = useVisible();
-  const q = useQuery({ queryKey: ["conversations", "inbox"], queryFn: () => get<ConversationDTO[]>("/conversations?box=inbox"), refetchInterval: visible ? INBOX_POLL_MS : false });
-  const requests = useQuery({ queryKey: ["conversations", "requests"], queryFn: () => get<ConversationDTO[]>("/conversations?box=requests"), refetchInterval: visible ? INBOX_POLL_MS : false });
+  const q = useQuery({ queryKey: ["conversations", "inbox"], queryFn: () => get<ConversationDTO[]>("/conversations?box=inbox"), refetchInterval: visible ? (realtime ? INBOX_POLL_FALLBACK_MS : INBOX_POLL_MS) : false });
+  const requests = useQuery({ queryKey: ["conversations", "requests"], queryFn: () => get<ConversationDTO[]>("/conversations?box=requests"), refetchInterval: visible ? (realtime ? INBOX_POLL_FALLBACK_MS : INBOX_POLL_MS) : false });
   return (
     <div>
       <PageHeader
@@ -205,7 +210,9 @@ export function ConversationView({ id }: { id: string }) {
     };
   }, [id]);
 
-  // Near-realtime polling for new messages (documented interval; pauses when hidden).
+  // New messages arrive through the realtime stream (Postgres LISTEN/NOTIFY → SSE).
+  // Polling remains as a fallback: 4 s while the stream is down, 30 s while it's up.
+  const realtime = useRealtimeConnected();
   useEffect(() => {
     if (!visible || loading || loadError) return;
     const tick = async () => {
@@ -224,9 +231,30 @@ export function ConversationView({ id }: { id: string }) {
         /* transient: next tick retries */
       }
     };
-    const t = setInterval(tick, THREAD_POLL_MS);
-    return () => clearInterval(t);
-  }, [id, visible, loading, loadError]);
+    // Reactions/edits to already-loaded messages: refresh the latest page in place.
+    const refreshLatest = async () => {
+      try {
+        const r = await get<{ items: MessageDTO[] }>(`/conversations/${id}/messages`);
+        const byId = new Map(r.items.map((m) => [m.id, m]));
+        setMessages((prev) => prev.map((m) => byId.get(m.id) ?? m));
+      } catch {
+        /* ignore */
+      }
+    };
+    const onEvent = (e: Event) => {
+      const d = (e as CustomEvent<{ type: string; conversationId?: string }>).detail;
+      if (d.conversationId !== id) return;
+      if (d.type === "message") void tick();
+      if (d.type === "conversation") void refreshLatest();
+    };
+    window.addEventListener(REALTIME_EVENT, onEvent);
+    void tick(); // catch up on anything sent while the stream (re)connected
+    const t = setInterval(tick, realtime ? THREAD_POLL_FALLBACK_MS : THREAD_POLL_MS);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener(REALTIME_EVENT, onEvent);
+    };
+  }, [id, visible, loading, loadError, realtime]);
 
   // Mark read when visible and there are messages.
   const newestIncoming = [...messages].reverse().find((m) => m.sender.id !== s.actor.id)?.id;
@@ -243,6 +271,25 @@ export function ConversationView({ id }: { id: string }) {
     const el = scroller.current;
     if (el && stick.current) el.scrollTop = el.scrollHeight;
   }, [messages.length, local.length, loading]);
+  // Images and videos finish loading after the first scroll; stay pinned to the newest
+  // message while content grows, unless the reader has scrolled up into history.
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => {
+      if (stick.current) el.scrollTop = el.scrollHeight;
+    });
+    for (const child of Array.from(el.children)) ro.observe(child);
+    const mo = new MutationObserver(() => {
+      ro.disconnect();
+      for (const child of Array.from(el.children)) ro.observe(child);
+    });
+    mo.observe(el, { childList: true });
+    return () => {
+      ro.disconnect();
+      mo.disconnect();
+    };
+  }, [loading]);
 
   const loadOlder = async () => {
     const first = messages[0];
@@ -411,7 +458,7 @@ function MessageBubble({ m, mine, group, showDate, onHidden, onReplace, onReport
               <div key={media.id} className="mb-1 w-[min(320px,70vw)]">
                 {media.kind === "VIDEO" ? <VideoPlayer media={media} /> : media.kind === "GIF" ? <GifPlayer media={media} /> : (
                   <a href={media.url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-card border border-line">
-                    <img src={media.thumbUrl ?? media.url} alt={media.alt} className="w-full object-cover" />
+                    <img src={media.thumbUrl ?? media.url} alt={media.alt} className="w-full object-cover" style={media.width && media.height ? { aspectRatio: `${media.width} / ${media.height}` } : undefined} />
                   </a>
                 )}
               </div>
@@ -520,12 +567,21 @@ function MessageComposer({ conversationId, initialDraft, onSend }: { conversatio
           type="file"
           hidden
           accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm"
-          onChange={(e) => {
+          onChange={async (e) => {
             const f = e.target.files?.[0];
             e.target.value = "";
             if (!f) return;
             setError(null);
-            const { promise, abort } = uploadFile<MediaDTO>(f, { scope: "MESSAGE" }, (p) => setUploading((u) => (u ? { ...u, progress: p } : u)));
+            const fields: Record<string, string> = { scope: "MESSAGE" };
+            const extra: Record<string, Blob> = {};
+            if (f.type.startsWith("video/")) {
+              const info = await inspectVideo(f);
+              if (info.width) fields.width = String(info.width);
+              if (info.height) fields.height = String(info.height);
+              if (info.durationMs) fields.durationMs = String(info.durationMs);
+              if (info.poster) extra.poster = info.poster;
+            }
+            const { promise, abort } = uploadFile<MediaDTO>(f, fields, (p) => setUploading((u) => (u ? { ...u, progress: p } : u)), extra);
             setUploading({ progress: 0, abort });
             promise.then((m) => setMedia(m)).catch((err: ApiError) => err.code !== "ABORTED" && setError(err.message)).finally(() => setUploading(null));
           }}

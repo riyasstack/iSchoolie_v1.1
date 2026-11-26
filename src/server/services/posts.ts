@@ -7,6 +7,7 @@ import { loadViewerGraph, toUserDTO, userSelect, relationshipsFor } from "./grap
 import { serializePosts, isPost, visiblePosts } from "./serialize";
 import { notify, retractNotification, dedupeKeys } from "./notifications";
 import { extractHashtags, extractMentions } from "@/lib/text";
+import { firstLink, requestPreview } from "./link-preview";
 import type { ComposePayload, PostDTO, PostDetailDTO, UnavailableDTO, UserListItem } from "@/lib/types";
 
 function rid() {
@@ -159,6 +160,9 @@ export async function publishThread(tx: Tx, ctx: RequestContext, payload: Compos
       await tx.poll.create({ data: { id: pollId, workspaceId: ws, postId: pid, endsAt: new Date(base + item.poll.durationMinutes * 60_000) } });
       await tx.pollOption.createMany({ data: item.poll.choices.map((label, position) => ({ workspaceId: ws, pollId, position, label })) });
     }
+    // Link card for the first URL when nothing else is attached (fetched later by the worker).
+    const link = !item.mediaIds.length && !item.poll && !(isFirst && payload.quotedPostId) ? firstLink(item.text) : null;
+    if (link) await requestPreview(tx, ws, link, me);
     if (!conversationId) conversationId = pid;
     prevId = pid;
     created.push(pid);

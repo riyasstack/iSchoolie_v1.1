@@ -1,6 +1,6 @@
 # Test and measurement results
 
-Recorded 24 Nov 2026 on Windows 11 (Node 24.20, PostgreSQL 17 embedded, Chromium 159 via
+Recorded 24 Nov 2026 and updated 26 Nov 2026 on Windows 11 (Node 24.20, PostgreSQL 17 embedded, Chromium 159 via
 Playwright 1.65.1). These are the results of runs actually executed during the build.
 
 ## Static checks
@@ -9,10 +9,19 @@ Playwright 1.65.1). These are the results of runs actually executed during the b
 |---|---|---|
 | Lint | `npm run lint` | 0 errors, 0 warnings |
 | Types | `npm run typecheck` | pass |
-| Production build | `npm run build` | pass (69 routes, proxy) |
+| Production build | `npm run build` | pass, no warnings (includes `/favicon.ico`, `/robots.txt`) |
 | Seed integrity | `npm run seed:check` | pass — 27 users, 126 posts (1 deleted tombstone), 3 polls, 6 conversations, ~360 notifications; seeds in ~0.5 s |
 
-## Unit + integration (`npm test`) — 50 passed / 0 failed
+## Unit + integration (`npm test`) — 90 passed / 0 failed (10 files)
+
+Added on 26 Nov (second pass): `tests/unit/link-preview.test.ts` (SSRF address policy incl.
+cloud-metadata and IPv4-mapped addresses, metadata parsing), `tests/integration/link-preview.test.ts`
+(pending preview + job on publish, private targets refused, DNS-rebinding answers refused,
+redirect loops, non-HTML, oversized images, card rendering and image storage),
+`tests/integration/realtime.test.ts` (LISTEN/NOTIFY delivery after commit, ids only, no
+duplicate events) and `tests/integration/storage-contract.test.ts` (same contract for the local
+and S3 adapters; the S3 run uses an in-process S3-compatible server, not real AWS), plus a
+video-poster test in `coverage.test.ts`.
 
 - `tests/unit/text.test.ts` — weighted 280 count (URLs = 23, emoji/CJK = 2), entity
   extraction, `javascript:`/`data:` never linked, reserved handles, muted-word matching, RTL.
@@ -32,7 +41,26 @@ Playwright 1.65.1). These are the results of runs actually executed during the b
   superseded/canceled jobs skipped; cross-workspace reads/writes refused and rejected by
   composite foreign keys.
 
-## Browser journeys (`npm run test:e2e`) — 19 passed / 0 failed
+## Browser journeys (`npm run test:e2e`) — 31 passed / 0 failed (final clean run, 5.0 min)
+
+Second-pass additions in `ui-flows.spec.ts`: copy link (clipboard contents) and native share
+(payload), realtime delivery (a message sent from a separate process appeared in the open chat
+in 0.96 s while the fallback poll was 30 s), video poster capture from a real WebM, and the
+full emoji picker (search, categories, recents, 2-per-emoji weighting). A real public page
+(example.com) was also previewed once end to end through the worker.
+
+
+`tests/integration/coverage.test.ts` (added 26 Nov, 18 tests) covers engagement lists,
+owner-only post activity, reports, delete tombstones, conversation mute, the profile bell,
+topic follows in Home, suggestions, the new-posts count, unprotect/handle rules, group
+management, direct-conversation removal, reactions, delete-for-me, sharing, uploads
+(re-encoding, content sniffing, scope rules, owner-only access, video byte ranges) and
+bundled GIFs. `tests/e2e/ui-flows.spec.ts` (8 tests) drives the matching screens:
+engagement pages, hidden replies, activity dialog, delete and report, conversation mute
+and list membership from the post menu, share by message, GIF/poll/schedule pickers,
+reactions/rename/snooze/delete-for-me, topics/connect/new-posts pill, and the
+sensitive-media setting.
+
 
 Desktop (1280×900): journeys 1–14 and 17 from the brief (publish & reload; like/repost/
 bookmark/quote sync; follow/unfollow; protected request → approve as the other seeded actor;
@@ -55,7 +83,13 @@ Bugs found by these runs and fixed: compose modal closing itself (an effect retu
 close function, which React ran as cleanup); focal post not reading the shared cache;
 DB session time zone (Asia/Calcutta) skewing `CURRENT_TIMESTAMP` defaults and the job
 claim by 5.5 h; global `a { color: inherit }` outside Tailwind's layers overriding link
-colors; Explore layout shift.
+colors; Explore layout shift. On 26 Nov: `/favicon.ico` and `/robots.txt` rendered a profile
+page (now a real icon, a robots file, and a 404 for non-handle paths); conversations
+didn't open at the newest message once images loaded; a seeded group chat had a reply
+timestamped before its question. Second pass: a dev-server reload loop caused by Next's dev MCP
+log file (disabled via `experimental.mcpServer: false`, then confirmed stable under the exact
+conditions that looped); build-output tracing of the whole project from the local storage
+adapter (now excluded).
 
 ## Performance (production build, `scripts/measure-performance.ts`)
 
