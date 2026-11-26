@@ -9,6 +9,8 @@ import http from "node:http";
 import type { AddressInfo } from "node:net";
 import { localStorage, type StorageAdapter } from "@/server/storage";
 import { createS3Storage } from "@/server/storage/s3";
+import { createDbStorage } from "@/server/storage/db";
+import { prisma } from "@/server/db";
 
 const PAGE = 2; // small page size to exercise ListObjectsV2 pagination
 const objects = new Map<string, Buffer>();
@@ -86,6 +88,7 @@ async function readAll(s: ReadableStream<Uint8Array>) {
 const adapters: [string, () => StorageAdapter][] = [
   ["local", () => localStorage],
   ["s3 (S3-compatible test server)", () => createS3Storage({ bucket: "test-bucket", region: "us-east-1", endpoint, forcePathStyle: true, accessKeyId: "test", secretAccessKey: "test", prefix: "app/" }, localStorage)],
+  ["db (Postgres StoredObject table)", () => createDbStorage(localStorage)],
 ];
 
 describe.each(adapters)("storage contract: %s", (_name, make) => {
@@ -132,5 +135,51 @@ describe("s3 adapter specifics", () => {
     expect(requests.some((r) => r.startsWith("PUT /test-bucket/app/ws/contract-")), seen).toBe(true);
     expect(requests.filter((r) => r.includes("list-type=2") && r.includes("continuation-token")).length, seen).toBeGreaterThan(0);
     expect(requests.some((r) => /^POST \/test-bucket\/?\?delete/.test(r)), seen).toBe(true);
+  });
+});
+
+describe("db adapter specifics", () => {
+  it("stores bytes in the StoredObject table and only removes whole path prefixes", async () => {
+    const s = createDbStorage(localStorage);
+    const root = `ws/dbtest-${Math.random().toString(36).slice(2, 8)}`;
+    await s.put(`${root}/p/a.bin`, Buffer.from("aa"));
+    await s.put(`${root}/p2/b.bin`, Buffer.from("bb"));
+    expect(await prisma.storedObject.count({ where: { key: { startsWith: root } } })).toBe(2);
+    await s.put(`${root}/p/a.bin`, Buffer.from("aaaa")); // overwrite
+    expect((await s.get(`${root}/p/a.bin`))?.size).toBe(4);
+    await s.deletePrefix(`${root}/p`);
+    expect(await s.get(`${root}/p/a.bin`)).toBeNull();
+    expect(await s.get(`${root}/p2/b.bin`)).not.toBeNull();
+    await s.deletePrefix(root);
+    expect(await prisma.storedObject.count({ where: { key: { startsWith: root } } })).toBe(0);
+  });
+});
+
+describe("profile photo upload with STORAGE_DRIVER=db", () => {
+  it("re-encodes, stores and serves the image from the database", async () => {
+    const { newWorkspace, ctxFor } = await import("./helpers");
+    const { deleteWorkspace } = await import("@/server/services/workspace");
+    const Media = await import("@/server/services/media");
+    const { readFileSync } = await import("node:fs");
+    const prev = process.env.STORAGE_DRIVER;
+    process.env.STORAGE_DRIVER = "db";
+    const ws = await newWorkspace();
+    try {
+      const ctx = await ctxFor(ws, "maya_learns");
+      const png = readFileSync("public/brand/icon-192.png");
+      const file = new File([png], "avatar.png", { type: "image/png" });
+      const m = await Media.upload(ctx, file, { scope: "PROFILE" });
+      const row = await prisma.mediaAsset.findUniqueOrThrow({ where: { id: m.id } });
+      const stored = await prisma.storedObject.findUnique({ where: { key: row.storageKey } });
+      expect(stored?.size).toBeGreaterThan(100);
+      const res = await Media.serveMedia(ctx, m.id, null, null);
+      expect(res.status).toBe(200);
+      expect(res.headers.get("content-type")).toMatch(/^image\/jpeg/);
+      expect(Buffer.from(await res.arrayBuffer()).subarray(0, 2).toString("hex")).toBe("ffd8");
+    } finally {
+      await deleteWorkspace(ws);
+      if (prev === undefined) delete process.env.STORAGE_DRIVER;
+      else process.env.STORAGE_DRIVER = prev;
+    }
   });
 });

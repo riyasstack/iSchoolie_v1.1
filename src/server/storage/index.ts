@@ -5,11 +5,13 @@
  *   Keys starting with "seed/" resolve read-only to assets/seed (shared fictional seed media).
  * - "s3": any S3-compatible bucket (./s3.ts). Objects stay private; delivery stays behind
  *   /api/media/:id so authorization runs on every read.
+ * - "db": bytes in the app's own Postgres (./db.ts), for hosts without object storage.
  */
 import { createReadStream, promises as fs } from "node:fs";
 import path from "node:path";
 import { env } from "../env";
 import { createS3Storage, s3ConfigFromEnv } from "./s3";
+import { createDbStorage } from "./db";
 
 export interface StoredObject {
   size: number;
@@ -78,11 +80,13 @@ export const localStorage: StorageAdapter = {
 };
 
 let s3Adapter: StorageAdapter | null = null;
+let dbAdapter: StorageAdapter | null = null;
 
 export function storage(): StorageAdapter {
   const driver = process.env.STORAGE_DRIVER ?? "local";
   if (driver === "local") return localStorage;
   if (driver === "s3") return (s3Adapter ??= createS3Storage(s3ConfigFromEnv(), localStorage));
+  if (driver === "db") return (dbAdapter ??= createDbStorage(localStorage));
   // No silent fallback to another backend.
-  throw new Error(`Unknown STORAGE_DRIVER "${driver}" (use "local" or "s3").`);
+  throw new Error(`Unknown STORAGE_DRIVER "${driver}" (use "local", "s3" or "db").`);
 }

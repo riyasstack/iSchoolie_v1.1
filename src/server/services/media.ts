@@ -21,6 +21,20 @@ import { loadViewerGraph } from "./graph";
 import { postAccess, authorAccess } from "../policy";
 import { toMediaDTO } from "./serialize";
 import { userSelect } from "./graph";
+import { log } from "../log";
+
+/**
+ * Saving to storage is a different failure from an unreadable file: report it as such
+ * (and log the cause) instead of telling the person their photo is damaged.
+ */
+async function save(key: string, data: Buffer) {
+  try {
+    await storage().put(key, data);
+  } catch (e) {
+    log("error", "storage_put_failed", { driver: process.env.STORAGE_DRIVER ?? "local", error: e instanceof Error ? `${e.name}: ${e.message}` : String(e) });
+    throw new AppError("INTERNAL", "Your upload couldn’t be saved right now. Try again in a moment.");
+  }
+}
 
 export const LIMITS = { IMAGE: 5 * 1024 * 1024, GIF: 15 * 1024 * 1024, VIDEO: 40 * 1024 * 1024 };
 const SCOPES = ["POST", "MESSAGE", "PROFILE", "LIST", "MOMENT"] as const;
@@ -45,9 +59,12 @@ export async function upload(
   await rateLimit(`upload:${ctx.actor.id}`, 60, 600, "Too many uploads. Try again in a few minutes.");
   if (!SCOPES.includes(opts.scope as Scope)) throw invalid("Unknown upload purpose.");
   const scope = opts.scope as Scope;
-  // Workspace storage quota for public demos.
-  const used = await prisma.mediaAsset.aggregate({ where: { workspaceId: ctx.workspace.id }, _sum: { bytes: true } });
-  if ((used._sum.bytes ?? 0) + file.size > 300 * 1024 * 1024) throw new AppError("PAYLOAD_TOO_LARGE", "This demo workspace has reached its 300 MB storage limit. Delete some uploads or reset the demo.");
+  // Storage quota: per demo workspace, or per member in the shared live network.
+  const live = ctx.mode === "live";
+  const used = await prisma.mediaAsset.aggregate({ where: { workspaceId: ctx.workspace.id, ...(live ? { ownerId: ctx.actor.id } : {}) }, _sum: { bytes: true } });
+  if ((used._sum.bytes ?? 0) + file.size > 300 * 1024 * 1024) {
+    throw new AppError("PAYLOAD_TOO_LARGE", live ? "You’ve reached your 300 MB upload limit. Delete some uploads to add more." : "This demo workspace has reached its 300 MB storage limit. Delete some uploads or reset the demo.");
+  }
   if (file.size > LIMITS.VIDEO) throw new AppError("PAYLOAD_TOO_LARGE", "Files must be 40 MB or smaller.");
   const buf = Buffer.from(await file.arrayBuffer());
   const type = sniff(buf);
@@ -79,11 +96,11 @@ export async function upload(
       mime = "image/jpeg";
       bytes = out.data.length;
       storageKey = `${base}.jpg`;
-      await storage().put(storageKey, out.data);
+      await save(storageKey, out.data);
       if (Math.max(width, height) > 900) {
         const thumb = await sharp(out.data).resize({ width: 900, height: 900, fit: "inside" }).jpeg({ quality: 80 }).toBuffer();
         thumbKey = `${base}_thumb.jpg`;
-        await storage().put(thumbKey, thumb);
+        await save(thumbKey, thumb);
       }
     } else if (type.kind === "GIF") {
       const meta = await sharp(buf, { animated: true, limitInputPixels: 50_000_000 }).metadata();
@@ -91,13 +108,13 @@ export async function upload(
       width = meta.width;
       height = meta.pageHeight ?? meta.height ?? null;
       storageKey = `${base}.gif`;
-      await storage().put(storageKey, buf);
+      await save(storageKey, buf);
       const still = await sharp(buf, { pages: 1 }).jpeg({ quality: 80 }).toBuffer();
       thumbKey = `${base}_still.jpg`;
-      await storage().put(thumbKey, still);
+      await save(thumbKey, still);
     } else {
       storageKey = `${base}.${type.mime === "video/mp4" ? "mp4" : "webm"}`;
-      await storage().put(storageKey, buf);
+      await save(storageKey, buf);
       // Dimensions come from the client's decoded metadata (bounded); no server transcoding.
       const clamp = (n: number | undefined) => (n && Number.isFinite(n) && n > 0 && n <= 8192 ? Math.round(n) : null);
       width = clamp(opts.width);
@@ -111,7 +128,7 @@ export async function upload(
             .jpeg({ quality: 80 })
             .toBuffer({ resolveWithObject: true });
           thumbKey = `${base}_poster.jpg`;
-          await storage().put(thumbKey, p.data);
+          await save(thumbKey, p.data);
           width = width ?? p.info.width;
           height = height ?? p.info.height;
         } catch {
@@ -121,6 +138,7 @@ export async function upload(
     }
   } catch (e) {
     if (e instanceof AppError) throw e;
+    log("warn", "media_decode_failed", { kind: type.kind, mime: type.mime, bytes: buf.length, error: e instanceof Error ? `${e.name}: ${e.message}` : String(e) });
     throw new AppError("UNSUPPORTED_MEDIA", "That file couldn’t be read. It may be damaged.");
   }
   const row = await prisma.mediaAsset.create({

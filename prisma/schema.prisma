@@ -11,8 +11,8 @@
 // rows at read time; there are no UI-owned counters.
 
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
   moduleFormat = "esm"
 }
 
@@ -124,49 +124,49 @@ model DemoWorkspace {
   lastActiveAt DateTime      @default(now())
   expiresAt    DateTime?
 
-  sessions         DemoSession[]
-  users            User[]
-  preferences      Preferences[]
-  follows          Follow[]
-  followRequests   FollowRequest[]
-  blocks           Block[]
-  mutes            Mute[]
-  mutedWords       MutedWord[]
-  posts            Post[]
-  mentions         Mention[]
-  likes            Like[]
-  reposts          Repost[]
-  media            MediaAsset[]
-  postMedia        PostMedia[]
-  polls            Poll[]
-  pollOptions      PollOption[]
-  pollVotes        PollVote[]
-  bookmarks        Bookmark[]
-  lists            List[]
-  listMembers      ListMember[]
-  listSubs         ListSubscription[]
-  listPins         ListPin[]
-  topics           Topic[]
-  topicFollows     TopicFollow[]
-  moments          Moment[]
-  momentItems      MomentItem[]
-  conversations    Conversation[]
-  participants     Participant[]
-  messages         Message[]
-  messageMedia     MessageAttachment[]
-  messageHidden    MessageHidden[]
-  messageReactions MessageReaction[]
-  notifications    Notification[]
-  hiddenReplies    HiddenReply[]
+  sessions          DemoSession[]
+  users             User[]
+  preferences       Preferences[]
+  follows           Follow[]
+  followRequests    FollowRequest[]
+  blocks            Block[]
+  mutes             Mute[]
+  mutedWords        MutedWord[]
+  posts             Post[]
+  mentions          Mention[]
+  likes             Like[]
+  reposts           Repost[]
+  media             MediaAsset[]
+  postMedia         PostMedia[]
+  polls             Poll[]
+  pollOptions       PollOption[]
+  pollVotes         PollVote[]
+  bookmarks         Bookmark[]
+  lists             List[]
+  listMembers       ListMember[]
+  listSubs          ListSubscription[]
+  listPins          ListPin[]
+  topics            Topic[]
+  topicFollows      TopicFollow[]
+  moments           Moment[]
+  momentItems       MomentItem[]
+  conversations     Conversation[]
+  participants      Participant[]
+  messages          Message[]
+  messageMedia      MessageAttachment[]
+  messageHidden     MessageHidden[]
+  messageReactions  MessageReaction[]
+  notifications     Notification[]
+  hiddenReplies     HiddenReply[]
   conversationMutes ConversationMute[]
-  savedSearches    SavedSearch[]
-  recentSearches   RecentSearch[]
-  drafts           Draft[]
-  scheduledPosts   ScheduledPost[]
-  reports          Report[]
-  postEvents       PostEvent[]
-  idempotency      IdempotencyRecord[]
-  linkPreviews     LinkPreview[]
+  savedSearches     SavedSearch[]
+  recentSearches    RecentSearch[]
+  drafts            Draft[]
+  scheduledPosts    ScheduledPost[]
+  reports           Report[]
+  postEvents        PostEvent[]
+  idempotency       IdempotencyRecord[]
+  linkPreviews      LinkPreview[]
 
   @@index([kind, expiresAt])
 }
@@ -196,67 +196,67 @@ model RateLimit {
 }
 
 model User {
-  id               String        @id @default(cuid())
-  workspaceId      String
-  workspace        DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  handle           String
-  handleLower      String
-  displayName      String
-  bio              String        @default("")
-  location         String        @default("")
-  website          String        @default("")
-  avatarMediaId    String?
-  bannerMediaId    String?
-  isProtected      Boolean       @default(false)
+  id            String        @id @default(cuid())
+  workspaceId   String
+  workspace     DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  handle        String
+  handleLower   String
+  displayName   String
+  bio           String        @default("")
+  location      String        @default("")
+  website       String        @default("")
+  avatarMediaId String?
+  bannerMediaId String?
+  isProtected   Boolean       @default(false)
   // Fictional seeded badge meaning "iSchoolie demo team account". Never identity verification.
-  demoTeamBadge    Boolean       @default(false)
-  suspended        Boolean       @default(false)
+  demoTeamBadge Boolean       @default(false)
+  suspended     Boolean       @default(false)
   // Seeded identities the demo actor switcher may select.
-  isSeedActor      Boolean       @default(true)
-  dmPolicy         DmPolicy      @default(EVERYONE)
-  pinnedPostId     String?
-  createdAt        DateTime      @default(now())
+  isSeedActor   Boolean       @default(true)
+  dmPolicy      DmPolicy      @default(EVERYONE)
+  pinnedPostId  String?
+  createdAt     DateTime      @default(now())
 
-  sessions          DemoSession[]
-  preferences       Preferences?
-  posts             Post[]              @relation("PostAuthor")
-  following         Follow[]            @relation("Follower")
-  followers         Follow[]            @relation("Followee")
-  sentRequests      FollowRequest[]     @relation("Requester")
-  receivedRequests  FollowRequest[]     @relation("RequestTarget")
-  blocking          Block[]             @relation("Blocker")
-  blockedBy         Block[]             @relation("Blocked")
-  muting            Mute[]              @relation("Muter")
-  mutedBy           Mute[]              @relation("Muted")
-  mutedWords        MutedWord[]
-  mentions          Mention[]
-  likes             Like[]
-  reposts           Repost[]
-  media             MediaAsset[]
-  pollVotes         PollVote[]
-  bookmarks         Bookmark[]
-  ownedLists        List[]
-  listMemberships   ListMember[]
-  listSubscriptions ListSubscription[]
-  listPins          ListPin[]
-  topicFollows      TopicFollow[]
-  moments           Moment[]
-  participants      Participant[]
-  messages          Message[]
-  messageHidden     MessageHidden[]
-  messageReactions  MessageReaction[]
-  notifications     Notification[]      @relation("NotificationRecipient")
-  actedNotifications Notification[]     @relation("NotificationActor")
-  hiddenReplies     HiddenReply[]
-  conversationMutes ConversationMute[]
-  savedSearches     SavedSearch[]
-  recentSearches    RecentSearch[]
-  drafts            Draft[]
-  scheduledPosts    ScheduledPost[]
-  reports           Report[]
+  sessions             DemoSession[]
+  preferences          Preferences?
+  posts                Post[]             @relation("PostAuthor")
+  following            Follow[]           @relation("Follower")
+  followers            Follow[]           @relation("Followee")
+  sentRequests         FollowRequest[]    @relation("Requester")
+  receivedRequests     FollowRequest[]    @relation("RequestTarget")
+  blocking             Block[]            @relation("Blocker")
+  blockedBy            Block[]            @relation("Blocked")
+  muting               Mute[]             @relation("Muter")
+  mutedBy              Mute[]             @relation("Muted")
+  mutedWords           MutedWord[]
+  mentions             Mention[]
+  likes                Like[]
+  reposts              Repost[]
+  media                MediaAsset[]
+  pollVotes            PollVote[]
+  bookmarks            Bookmark[]
+  ownedLists           List[]
+  listMemberships      ListMember[]
+  listSubscriptions    ListSubscription[]
+  listPins             ListPin[]
+  topicFollows         TopicFollow[]
+  moments              Moment[]
+  participants         Participant[]
+  messages             Message[]
+  messageHidden        MessageHidden[]
+  messageReactions     MessageReaction[]
+  notifications        Notification[]     @relation("NotificationRecipient")
+  actedNotifications   Notification[]     @relation("NotificationActor")
+  hiddenReplies        HiddenReply[]
+  conversationMutes    ConversationMute[]
+  savedSearches        SavedSearch[]
+  recentSearches       RecentSearch[]
+  drafts               Draft[]
+  scheduledPosts       ScheduledPost[]
+  reports              Report[]
   createdConversations Conversation[]
-  postEvents        PostEvent[]
-  authIdentity      AuthIdentity?
+  postEvents           PostEvent[]
+  authIdentity         AuthIdentity?
 
   @@unique([workspaceId, id])
   @@unique([workspaceId, handleLower])
@@ -266,33 +266,33 @@ model User {
 }
 
 model Preferences {
-  userId            String        @id
-  workspaceId       String
-  workspace         DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  user              User          @relation(fields: [workspaceId, userId], references: [workspaceId, id], onDelete: Cascade)
-  theme             Theme         @default(DEFAULT)
-  accent            String        @default("brand")
-  fontScale         Int           @default(100)
-  reducedMotion     Boolean       @default(false)
-  autoplay          Boolean       @default(true)
-  dataSaver         Boolean       @default(false)
-  showSensitiveMedia Boolean      @default(false)
-  altTextReminder   Boolean       @default(false)
-  timelineMode      String        @default("home")
+  userId              String        @id
+  workspaceId         String
+  workspace           DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user                User          @relation(fields: [workspaceId, userId], references: [workspaceId, id], onDelete: Cascade)
+  theme               Theme         @default(DEFAULT)
+  accent              String        @default("brand")
+  fontScale           Int           @default(100)
+  reducedMotion       Boolean       @default(false)
+  autoplay            Boolean       @default(true)
+  dataSaver           Boolean       @default(false)
+  showSensitiveMedia  Boolean       @default(false)
+  altTextReminder     Boolean       @default(false)
+  timelineMode        String        @default("home")
   // In-app notification preferences (no external delivery exists in this phase).
-  notifyLikes       Boolean       @default(true)
-  notifyReposts     Boolean       @default(true)
-  notifyReplies     Boolean       @default(true)
-  notifyMentions    Boolean       @default(true)
-  notifyFollows     Boolean       @default(true)
-  notifyQuotes      Boolean       @default(true)
+  notifyLikes         Boolean       @default(true)
+  notifyReposts       Boolean       @default(true)
+  notifyReplies       Boolean       @default(true)
+  notifyMentions      Boolean       @default(true)
+  notifyFollows       Boolean       @default(true)
+  notifyQuotes        Boolean       @default(true)
   // Advanced filter: hide notifications from people you don't follow.
-  filterNotFollowing Boolean      @default(false)
+  filterNotFollowing  Boolean       @default(false)
   // Filter notifications from accounts without a profile photo.
-  filterNoAvatar    Boolean       @default(false)
-  showReadReceipts  Boolean       @default(true)
-  searchHideSensitive Boolean     @default(true)
-  updatedAt         DateTime      @updatedAt
+  filterNoAvatar      Boolean       @default(false)
+  showReadReceipts    Boolean       @default(true)
+  searchHideSensitive Boolean       @default(true)
+  updatedAt           DateTime      @updatedAt
 
   @@unique([workspaceId, userId])
 }
@@ -352,17 +352,17 @@ model Mute {
 }
 
 model MutedWord {
-  id                 String        @id @default(cuid())
-  workspaceId        String
-  workspace          DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  userId             String
-  user               User          @relation(fields: [workspaceId, userId], references: [workspaceId, id], onDelete: Cascade)
-  phrase             String
-  phraseLower        String
-  inHome             Boolean       @default(true)
-  inNotifications    Boolean       @default(true)
-  expiresAt          DateTime?
-  createdAt          DateTime      @default(now())
+  id              String        @id @default(cuid())
+  workspaceId     String
+  workspace       DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User          @relation(fields: [workspaceId, userId], references: [workspaceId, id], onDelete: Cascade)
+  phrase          String
+  phraseLower     String
+  inHome          Boolean       @default(true)
+  inNotifications Boolean       @default(true)
+  expiresAt       DateTime?
+  createdAt       DateTime      @default(now())
 
   @@unique([userId, phraseLower])
 }
@@ -394,18 +394,18 @@ model Post {
   // Soft delete keeps a tombstone so reply chains and quotes render "unavailable".
   deletedAt      DateTime?
 
-  mentions     Mention[]
-  likes        Like[]
-  reposts      Repost[]
-  media        PostMedia[]
-  poll         Poll?
-  bookmarks    Bookmark[]
-  momentItems  MomentItem[]
-  notifications Notification[]
-  hiddenReply  HiddenReply?
+  mentions          Mention[]
+  likes             Like[]
+  reposts           Repost[]
+  media             PostMedia[]
+  poll              Poll?
+  bookmarks         Bookmark[]
+  momentItems       MomentItem[]
+  notifications     Notification[]
+  hiddenReply       HiddenReply?
   conversationMutes ConversationMute[]
-  events       PostEvent[]
-  sharedInMessages Message[]
+  events            PostEvent[]
+  sharedInMessages  Message[]
 
   @@unique([workspaceId, id])
   @@unique([authorId, clientKey])
@@ -807,14 +807,14 @@ model HiddenReply {
 }
 
 model ConversationMute {
-  workspaceId    String
-  workspace      DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  userId         String
+  workspaceId String
+  workspace   DemoWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  userId      String
   // Root post id of the muted conversation.
-  rootPostId     String
-  user           User          @relation(fields: [workspaceId, userId], references: [workspaceId, id], onDelete: Cascade)
-  rootPost       Post          @relation(fields: [workspaceId, rootPostId], references: [workspaceId, id], onDelete: Cascade)
-  createdAt      DateTime      @default(now())
+  rootPostId  String
+  user        User          @relation(fields: [workspaceId, userId], references: [workspaceId, id], onDelete: Cascade)
+  rootPost    Post          @relation(fields: [workspaceId, rootPostId], references: [workspaceId, id], onDelete: Cascade)
+  createdAt   DateTime      @default(now())
 
   @@id([userId, rootPostId])
 }
@@ -972,4 +972,13 @@ model AuthIdentity {
   createdAt DateTime @default(now())
 
   @@unique([provider, subject])
+}
+
+/// Uploaded file bytes for STORAGE_DRIVER=db (hosting without object storage).
+/// Keys mirror the other storage adapters ("ws/<workspace>/<id>.jpg", …).
+model StoredObject {
+  key       String   @id
+  data      Bytes
+  size      Int
+  createdAt DateTime @default(now())
 }
