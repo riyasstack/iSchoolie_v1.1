@@ -46,7 +46,7 @@ test("2. like, repost, bookmark and quote stay in sync across screens", async ({
   // Quote it.
   await page.goto(`/compose/post?quote=${target.id}`);
   const quote = `Quoting ${rand()}`;
-  await page.getByLabel("Add a comment").fill(quote);
+  await page.getByLabel("Add your note…").fill(quote);
   await page.getByRole("button", { name: "Publish", exact: true }).click();
   await expect(page.getByText("Your post was sent.")).toBeVisible();
   const after = await api<PostDTO>(page.request, "GET", `/posts/${target.id}`);
@@ -69,7 +69,10 @@ test("3. follow and unfollow update counts", async ({ page }) => {
 test("4. request a protected profile, approve as that account, then see posts", async ({ page }) => {
   await openApp(page, "/riley_locked");
   await expect(page.getByText("These posts are protected")).toBeVisible();
+  // Wait for the follow request to reach the server before switching accounts.
+  const followed = page.waitForResponse((r) => r.url().includes("/users/riley_locked/follow") && r.request().method() === "PUT");
   await page.locator("#main").getByRole("button", { name: "Follow", exact: true }).first().click();
+  expect((await followed).ok()).toBe(true);
   await expect(page.locator("#main").getByRole("button", { name: "Pending" })).toBeVisible();
   await switchActor(page, "riley_locked");
   await page.goto("/i/follower_requests");

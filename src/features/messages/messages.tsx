@@ -63,7 +63,7 @@ export function MessagesLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const listRoute = pathname === "/messages" || pathname === "/messages/requests";
   return (
-    <div className="flex min-h-dvh">
+    <div className="flex min-h-[calc(100dvh-var(--h-topbar))] sm:min-h-[calc(100dvh-var(--h-topbar)-40px)]">
       <section aria-label="Conversations" className={clsx("w-full min-w-0 border-line md:w-[390px] md:shrink-0 md:border-r", !listRoute && "max-md:hidden")}>
         {pathname === "/messages/requests" ? <RequestsList /> : <Inbox />}
       </section>
@@ -346,7 +346,7 @@ export function ConversationView({ id }: { id: string }) {
   const lastIsOwn = !!lastOwn && messages.at(-1)?.id === lastOwn.id;
   const seenBy = c && lastOwn && lastIsOwn ? c.readBy.filter((r) => r.lastReadAt >= lastOwn.createdAt) : [];
   return (
-    <div className="flex h-dvh flex-col max-sm:h-[100dvh]">
+    <div className="flex h-[calc(100dvh-var(--h-topbar))] flex-col sm:h-[calc(100dvh-var(--h-topbar)-40px)]">
       <PageHeader
         back="/messages"
         title={c ? (

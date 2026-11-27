@@ -110,7 +110,7 @@ function TopBar({ onOpenDrawer }: { onOpenDrawer: () => void }) {
       <div className="mx-auto flex h-[var(--h-topbar)] max-w-[1260px] items-center gap-4 px-4">
         <Link href="/home" aria-label="iSchoolie home" className="flex shrink-0 items-center gap-2 rounded-xl py-1 pr-2">
           <img src="/brand/ischoolie-symbol.png" alt="" width={34} height={34} className="rounded-lg" />
-          <span className="text-[1.25rem] font-extrabold tracking-tight text-fg">iSchoolie</span>
+          <span className="text-[1.2rem] font-semibold tracking-[-0.03em] text-fg">iSchoolie</span>
         </Link>
         <div className="hidden min-w-0 flex-1 justify-center md:flex">
           <div className="w-full max-w-[520px]">{!onSearch && <SearchBox />}</div>
@@ -185,7 +185,7 @@ function SpacesSidebar() {
         title={label}
         className={clsx(
           "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent-text",
-          active ? "bg-accent-soft font-semibold text-accent-text" : "text-fg hover:bg-hover-strong",
+          active ? "bg-hover-strong font-semibold text-fg" : "text-fg2 hover:bg-hover hover:text-fg",
         )}
       >
         <span className="relative shrink-0">
@@ -230,7 +230,7 @@ function SpacesSidebar() {
 
 function Badge({ n }: { n: number }) {
   return (
-    <span className="absolute -right-2 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-xl border-2 border-bg bg-like px-1 text-[0.625rem] font-semibold leading-none text-white" aria-label={`${n} unread`}>
+    <span className="absolute -right-2 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-xl border-2 border-bg bg-danger px-1 text-[0.625rem] font-semibold leading-none text-white" aria-label={`${n} unread`}>
       {n > 99 ? "99+" : n}
     </span>
   );
@@ -288,7 +288,7 @@ function BoardCard({ title, icon, children, more }: { title: string; icon: React
   return (
     <section className="campus-card overflow-hidden" aria-label={title}>
       <h2 className="flex items-center gap-2 px-4 pb-2 pt-4 text-[0.95rem] font-bold">
-        <span className="grid h-7 w-7 place-items-center rounded-lg bg-accent-soft text-accent-text [&>svg]:h-4 [&>svg]:w-4">{icon}</span>
+        <span className="grid h-7 w-7 place-items-center rounded-lg bg-subtle text-fg [&>svg]:h-4 [&>svg]:w-4">{icon}</span>
         {title}
       </h2>
       {children}
@@ -392,7 +392,7 @@ function BottomDock() {
           const active = navActive(pathname, it.key, s.actor.handle);
           const label = SPACE_LABELS[it.key];
           return (
-            <Link key={it.key} href={it.href} aria-label={label} aria-current={active ? "page" : undefined} className={clsx("my-1.5 flex flex-1 flex-col items-center justify-center gap-0.5 rounded-xl text-[0.6875rem] font-semibold", active ? "bg-accent-soft text-accent-text" : "text-fg2")}>
+            <Link key={it.key} href={it.href} aria-label={label} aria-current={active ? "page" : undefined} className={clsx("my-1.5 flex flex-1 flex-col items-center justify-center gap-0.5 rounded-xl text-[0.6875rem] font-semibold", active ? "bg-hover-strong text-fg" : "text-fg2")}>
               <span className="relative">
                 <NavIcon name={it.key} active={active} size={21} />
                 {!!it.badge && <Badge n={it.badge} />}
@@ -586,16 +586,16 @@ function GuestBar() {
   const ret = useReturnTo();
   return (
     <div role="region" aria-label="Join iSchoolie" data-testid="guest-bar" className="fixed inset-x-3 bottom-[calc(var(--h-bottom-nav)+20px+env(safe-area-inset-bottom))] z-40 sm:inset-x-auto sm:bottom-5 sm:left-1/2 sm:w-[min(760px,calc(100%-32px))] sm:-translate-x-1/2">
-      <div className="flex flex-col gap-3 rounded-2xl p-4 text-white shadow-lg sm:flex-row sm:items-center sm:justify-between sm:px-5" style={{ background: "linear-gradient(120deg, #5b4bdb 0%, #7b5cf0 55%, #e5483b 140%)" }}>
+      <div className="flex flex-col gap-3 rounded-2xl p-4 text-white shadow-lg sm:flex-row sm:items-center sm:justify-between sm:px-5" style={{ background: "rgba(29, 29, 31, 0.86)", backdropFilter: "saturate(180%) blur(20px)", WebkitBackdropFilter: "saturate(180%) blur(20px)" }}>
         <div className="min-w-0">
           <p className="text-[1.05rem] font-extrabold leading-tight sm:text-[1.2rem]">Your campus is talking</p>
-          <p className="text-sm text-white/85">Join iSchoolie to post, cheer classmates and find your clubs.</p>
+          <p className="text-sm text-white/70">Join iSchoolie to post, cheer classmates and find your clubs.</p>
         </div>
         <div className="flex shrink-0 gap-2">
           <Link href={`/signin${ret}`} className="flex min-h-[38px] flex-1 items-center justify-center rounded-xl border border-white/60 px-4 font-semibold hover:bg-white/10 sm:flex-none">
             Log in
           </Link>
-          <Link href={`/signup${ret}`} className="flex min-h-[38px] flex-1 items-center justify-center rounded-xl bg-white px-4 font-semibold text-[#4a3bc7] hover:bg-white/90 sm:flex-none">
+          <Link href={`/signup${ret}`} className="flex min-h-[38px] flex-1 items-center justify-center rounded-xl bg-white px-4 font-semibold text-[#1d1d1f] hover:bg-white/90 sm:flex-none">
             Join now
           </Link>
         </div>

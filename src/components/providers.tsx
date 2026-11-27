@@ -107,7 +107,7 @@ export function applyPreferences(p: Pick<PreferencesDTO, "theme" | "accent" | "f
   el.dataset.reducedMotion = String(p.reducedMotion);
   el.style.setProperty("--font-scale", String(p.fontScale));
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute("content", p.theme === "DIM" ? "#17162a" : p.theme === "LIGHTS_OUT" ? "#07070c" : "#f3f2fa");
+  if (meta) meta.setAttribute("content", p.theme === "DIM" ? "#161618" : p.theme === "LIGHTS_OUT" ? "#000000" : "#f5f5f7");
 }
 
 export function SessionGate({ children }: { children: ReactNode }) {

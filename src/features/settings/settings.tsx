@@ -482,9 +482,9 @@ export function DisplaySettingsBody() {
       <div className="mt-2 grid grid-cols-1 gap-2 rounded-card bg-subtle p-3 sm:grid-cols-3" role="radiogroup" aria-label="Background">
         {(
           [
-            ["DEFAULT", "Light", "#f3f2fa", "#1d1b2f"],
-            ["DIM", "Dusk", "#211f36", "#f1f0fb"],
-            ["LIGHTS_OUT", "Midnight", "#111019", "#e6e5f2"],
+            ["DEFAULT", "Light", "#f5f5f7", "#1d1d1f"],
+            ["DIM", "Dusk", "#1f1f21", "#f5f5f7"],
+            ["LIGHTS_OUT", "Midnight", "#000000", "#f5f5f7"],
           ] as const
         ).map(([k, label, bg, fg]) => (
           <button key={k} type="button" role="radio" aria-checked={prefs.theme === k} onClick={() => set({ theme: k })} className={clsx("flex min-h-[62px] items-center gap-3 rounded-md border-2 px-4 font-bold", prefs.theme === k ? "border-accent" : "border-transparent")} style={{ background: bg, color: fg }}>

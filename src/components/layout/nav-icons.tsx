@@ -42,7 +42,7 @@ export const SPACE_LABELS: Record<NavKey, string> = {
 
 export function NavIcon({ name, active, size = 22 }: { name: NavKey; active?: boolean; size?: number }) {
   const I = ICONS[name];
-  return <I size={size} strokeWidth={active ? 2.4 : 1.9} aria-hidden="true" />;
+  return <I size={size} strokeWidth={active ? 2.2 : 1.6} aria-hidden="true" />;
 }
 
 /** Compose icon. */

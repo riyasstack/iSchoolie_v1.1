@@ -570,7 +570,7 @@ export function PostMenu({ p }: { p: PostDTO }) {
               </MenuItem>
             )}
             <MenuItem icon={<ListPlus />} onSelect={() => dialogs.listMembership(h)}>
-              Add/remove @{h} from Lists
+              Add/remove @{h} from Circles
             </MenuItem>
             <MenuItem icon={p.viewer.conversationMuted ? <Bell /> : <BellOff />} onSelect={() => muteConv.mutate(!p.viewer.conversationMuted)}>
               {p.viewer.conversationMuted ? "Unmute this conversation" : "Mute this conversation"}

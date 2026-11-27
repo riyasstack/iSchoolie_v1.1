@@ -11,7 +11,7 @@ test("engagement pages, hidden replies link and post activity dialog", async ({ 
   await openApp(page, "/home");
   const p = await findPost(page, "from:prof_lindqvist orbits");
   await page.goto(`/prof_lindqvist/status/${p.id}`);
-  await page.getByRole("link", { name: /Likes?$/ }).first().click();
+  await page.getByRole("link", { name: /Cheers?$/ }).first().click();
   await expect(page).toHaveURL(/\/likes$/);
   await expect(page.getByRole("heading", { name: "Cheered by" })).toBeVisible();
   await expect(page.locator("#main").getByRole("link", { name: /profile$/ }).first()).toBeVisible();
@@ -64,7 +64,7 @@ test("mute a conversation and add an author to a list from the post menu", async
   const card = page.locator(`article[data-post-id="${p.id}"]`).first();
   await card.getByRole("button", { name: "More" }).click();
   await page.getByRole("menuitem", { name: "Mute this conversation" }).click();
-  await expect(page.getByText(/won’t get notifications from this conversation/)).toBeVisible();
+  await expect(page.getByText(/won’t get alerts from this conversation/)).toBeVisible();
   expect((await api<PostDTO>(page.request, "GET", `/posts/${p.id}`)).viewer.conversationMuted).toBe(true);
   await card.getByRole("button", { name: "More" }).click();
   await page.getByRole("menuitem", { name: /Add\/remove @zara_designs from Circles/ }).click();
@@ -152,7 +152,7 @@ test("message reactions, delete-for-me, conversation info rename and snooze", as
 
 test("topics follow/unfollow, connect page, and the new-posts pill", async ({ page }) => {
   await openApp(page, "/i/topics");
-  const chess = page.getByRole("button", { name: "Follow topic Chess" });
+  const chess = page.getByRole("button", { name: "Follow interest Chess" });
   await chess.click();
   await expect.poll(async () => (await api<{ followed: { slug: string }[] }>(page.request, "GET", "/topics")).followed.some((t) => t.slug === "chess")).toBe(true);
   await page.goto("/i/connect");

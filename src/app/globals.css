@@ -1,54 +1,55 @@
 @import "tailwindcss";
 
 /*
- * iSchoolie "Campus Cards" visual system.
- * A softly tinted canvas, white rounded card surfaces, indigo accent with coral (cheer) and
- * teal (share) highlights, and Plus Jakarta Sans. Tokens live on :root and switch by
- * [data-theme] (DEFAULT = Light, DIM = Dusk, LIGHTS_OUT = Midnight) / [data-accent]; Tailwind
- * utilities map to these variables, so components never hard-code theme colors.
+ * iSchoolie visual system: Campus Cards layout with a calm, premium finish — neutral
+ * canvas, white and frosted-glass surfaces, graphite actions, blue links, SF Pro / Inter.
+ * Tokens live on :root and switch by [data-theme] (DEFAULT = Light, DIM = Dusk graphite,
+ * LIGHTS_OUT = Midnight black) / [data-accent]; Tailwind utilities map to these variables,
+ * so components never hard-code theme colors.
  */
 
 :root {
-  --font-sans: var(--font-campus), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", var(--font-ui), "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-scale: 100;
 
-  /* Light */
-  --canvas: #f3f2fa;
-  --feed: #f8f7fd;
+  /* Light — calm neutrals, graphite actions, blue links */
+  --canvas: #f5f5f7;
+  --feed: #f5f5f7;
   --bg: #ffffff;
-  --fg: #1d1b2f;
-  --fg-secondary: #686784;
-  --border: #e8e6f3;
-  --border-strong: #d4d1e6;
-  --subtle: #f6f5fc;
-  --hover: rgba(91, 75, 219, 0.04);
-  --hover-strong: rgba(91, 75, 219, 0.08);
+  --fg: #1d1d1f;
+  --fg-secondary: #6e6e73;
+  --border: rgba(0, 0, 0, 0.08);
+  --border-strong: #d2d2d7;
+  --subtle: #f5f5f7;
+  --hover: rgba(0, 0, 0, 0.03);
+  --hover-strong: rgba(0, 0, 0, 0.06);
   --elevated: #ffffff;
-  --overlay: rgba(23, 20, 48, 0.45);
-  --media-overlay: rgba(10, 9, 20, 0.92);
-  --shadow: 0 1px 2px rgba(29, 27, 47, 0.06), 0 8px 28px rgba(29, 27, 47, 0.12);
-  --card-shadow: 0 1px 2px rgba(29, 27, 47, 0.04), 0 4px 16px rgba(29, 27, 47, 0.05);
-  --input-bg: #f1f0f9;
+  --overlay: rgba(0, 0, 0, 0.32);
+  --media-overlay: rgba(0, 0, 0, 0.92);
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 12px 40px rgba(0, 0, 0, 0.12);
+  --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 6px 24px rgba(0, 0, 0, 0.04);
+  --input-bg: rgba(118, 118, 128, 0.12);
+  --glass: rgba(255, 255, 255, 0.72);
 
-  --accent: #5b4bdb;
-  --accent-hover: #4a3bc7;
+  --accent: #1d1d1f;
+  --accent-hover: #000000;
   --accent-on: #ffffff;
-  --accent-text: #4f3fd0;
-  --accent-soft: rgba(91, 75, 219, 0.1);
-  --accent-softer: rgba(91, 75, 219, 0.05);
+  --accent-text: #0066cc;
+  --accent-soft: rgba(0, 113, 227, 0.1);
+  --accent-softer: rgba(0, 113, 227, 0.05);
 
-  /* "Share" (repost) and "Cheer" (like) */
-  --repost: #0e9474;
-  --repost-soft: rgba(14, 148, 116, 0.1);
-  --like: #e5483b;
-  --like-soft: rgba(240, 86, 74, 0.12);
-  --danger: #d93a4a;
-  --danger-hover: #bf2c3c;
-  --warning: #f2a516;
-  --success: #0e9474;
+  /* "Share" (indigo) and "Cheer" (warm orange) */
+  --repost: #5856d6;
+  --repost-soft: rgba(88, 86, 214, 0.1);
+  --like: #e8590c;
+  --like-soft: rgba(255, 107, 44, 0.12);
+  --danger: #d70015;
+  --danger-hover: #b80012;
+  --warning: #ff9f0a;
+  --success: #248a3d;
 
-  --brand: #5b4bdb;
-  --brand-ink: #1d1b2f;
+  --brand: #1d1d1f;
+  --brand-ink: #1d1d1f;
 
   /* Layout */
   --w-main: 620px;
@@ -56,64 +57,74 @@
   --w-nav-rail: 76px;
   --w-side: 330px;
   --w-side-narrow: 290px;
-  --h-topbar: 64px;
+  --h-topbar: 60px;
   --h-header: 56px;
   --h-bottom-nav: 60px;
 
   /* Motion */
-  --dur: 160ms;
-  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --dur: 200ms;
+  --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
 
   color-scheme: light;
 }
 
-/* Dusk */
+/* Dusk — graphite dark */
 :root[data-theme="DIM"] {
-  --canvas: #17162a;
-  --feed: #1b1a30;
-  --bg: #211f36;
-  --fg: #f1f0fb;
-  --fg-secondary: #a3a1c2;
-  --border: #33304d;
-  --border-strong: #45416a;
-  --subtle: #26243d;
+  --canvas: #161618;
+  --feed: #161618;
+  --bg: #1f1f21;
+  --fg: #f5f5f7;
+  --fg-secondary: #a1a1a6;
+  --border: rgba(255, 255, 255, 0.09);
+  --border-strong: #3a3a3c;
+  --subtle: #2a2a2d;
   --hover: rgba(255, 255, 255, 0.04);
   --hover-strong: rgba(255, 255, 255, 0.08);
-  --elevated: #262440;
-  --overlay: rgba(8, 7, 20, 0.6);
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 28px rgba(0, 0, 0, 0.45);
-  --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), 0 4px 16px rgba(0, 0, 0, 0.2);
-  --input-bg: #2b2944;
-  --accent-text: #a99fff;
-  --accent-soft: rgba(169, 159, 255, 0.14);
-  --accent-softer: rgba(169, 159, 255, 0.07);
-  --repost: #3fd0a8;
-  --like: #ff7a6e;
+  --elevated: #2a2a2d;
+  --overlay: rgba(0, 0, 0, 0.55);
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 12px 40px rgba(0, 0, 0, 0.5);
+  --card-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.04), 0 6px 24px rgba(0, 0, 0, 0.25);
+  --input-bg: rgba(118, 118, 128, 0.24);
+  --glass: rgba(31, 31, 33, 0.72);
+  --accent: #f5f5f7;
+  --accent-hover: #ffffff;
+  --accent-on: #1d1d1f;
+  --accent-text: #2997ff;
+  --accent-soft: rgba(41, 151, 255, 0.16);
+  --accent-softer: rgba(41, 151, 255, 0.08);
+  --repost: #7d7aff;
+  --like: #ff8a4c;
+  --danger: #ff453a;
   color-scheme: dark;
 }
 
-/* Midnight */
+/* Midnight — true black */
 :root[data-theme="LIGHTS_OUT"] {
-  --canvas: #07070c;
-  --feed: #0b0a12;
-  --bg: #111019;
-  --fg: #e6e5f2;
-  --fg-secondary: #8d8ba6;
-  --border: #24223a;
-  --border-strong: #36334f;
-  --subtle: #17161f;
+  --canvas: #000000;
+  --feed: #000000;
+  --bg: #111112;
+  --fg: #f5f5f7;
+  --fg-secondary: #86868b;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: #2c2c2e;
+  --subtle: #1c1c1e;
   --hover: rgba(255, 255, 255, 0.04);
   --hover-strong: rgba(255, 255, 255, 0.08);
-  --elevated: #17161f;
+  --elevated: #1c1c1e;
   --overlay: rgba(0, 0, 0, 0.65);
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 8px 28px rgba(0, 0, 0, 0.6);
-  --card-shadow: 0 0 0 1px rgba(255, 255, 255, 0.02);
-  --input-bg: #1c1b28;
-  --accent-text: #a99fff;
-  --accent-soft: rgba(169, 159, 255, 0.14);
-  --accent-softer: rgba(169, 159, 255, 0.07);
-  --repost: #3fd0a8;
-  --like: #ff7a6e;
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.5), 0 12px 40px rgba(0, 0, 0, 0.7);
+  --card-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.05);
+  --input-bg: rgba(118, 118, 128, 0.24);
+  --glass: rgba(17, 17, 18, 0.72);
+  --accent: #f5f5f7;
+  --accent-hover: #ffffff;
+  --accent-on: #000000;
+  --accent-text: #2997ff;
+  --accent-soft: rgba(41, 151, 255, 0.16);
+  --accent-softer: rgba(41, 151, 255, 0.08);
+  --repost: #7d7aff;
+  --like: #ff8a4c;
+  --danger: #ff453a;
   color-scheme: dark;
 }
 
@@ -185,7 +196,7 @@
   --text-display--line-height: 1.75rem;
 
   --radius-pill: 9999px;
-  --radius-card: 20px;
+  --radius-card: 22px;
   --shadow-menu: var(--shadow);
 }
 
@@ -204,6 +215,7 @@ body {
   color: var(--fg);
   font-size: var(--text-post);
   line-height: var(--text-post--line-height);
+  letter-spacing: -0.011em;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   min-height: 100dvh;
@@ -232,6 +244,11 @@ button:disabled {
 
 ::selection {
   background: var(--accent-soft);
+}
+
+/* Tight display headings. */
+h1, h2, h3 {
+  letter-spacing: -0.022em;
 }
 }
 
@@ -300,16 +317,19 @@ button:disabled {
 
 /* Campus cards: rounded surfaces on the tinted canvas. */
 .campus-card {
-  background: var(--bg);
+  background: var(--glass);
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   box-shadow: var(--card-shadow);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
 }
 .topbar-blur {
-  background: color-mix(in srgb, var(--canvas) 82%, transparent);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  background: color-mix(in srgb, var(--canvas) 72%, transparent);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
 }
+
 
 /* Utilities */
 .break-anywhere {
@@ -323,9 +343,9 @@ button:disabled {
   display: none;
 }
 .header-blur {
-  background: color-mix(in srgb, var(--bg) 88%, transparent);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: color-mix(in srgb, var(--bg) 80%, transparent);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
 }
 .safe-bottom {
   padding-bottom: env(safe-area-inset-bottom);
