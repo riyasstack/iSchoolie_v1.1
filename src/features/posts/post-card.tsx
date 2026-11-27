@@ -10,7 +10,7 @@ import {
 import { Avatar, DisplayName, Menu, MenuItem } from "@/components/ui/misc";
 import { ConfirmDialog } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/toast";
-import { GuestGate, useSession } from "@/components/providers";
+import { GuestGate, useRequireAccount, useSession } from "@/components/providers";
 import { compactCount, fullTime, relativeTime, absoluteTitle, pollTimeLeft } from "@/lib/format";
 import { del, put, errorMessage } from "@/lib/api";
 import { RichText } from "./rich-text";
@@ -117,6 +117,7 @@ export const PostCard = memo(function PostCard({
 
 function PostCardBody({ p, context, connectTop, connectBottom, showReplyingTo }: { p: PostDTO; context?: EntryContext; connectTop?: boolean; connectBottom?: boolean; showReplyingTo: boolean }) {
   const open = useOpenPost(p);
+  const onDoubleTap = useDoubleTapCheer(p);
   const [showHidden, setShowHidden] = useState(false);
   if (p.viewer.authorMuted && !showHidden && context?.type !== "pinned") {
     // Muted authors collapse in conversations; they're already filtered from feeds.
@@ -129,15 +130,32 @@ function PostCardBody({ p, context, connectTop, connectBottom, showReplyingTo }:
       </div>
     );
   }
+  const cardProps = {
+    "data-post-id": p.id,
+    tabIndex: 0,
+    "aria-label": `Post by ${p.author.displayName}`,
+    onClick: open,
+    onKeyDown: (e: KeyboardEvent) => e.key === "Enter" && e.target === e.currentTarget && open(e),
+  };
+  const cardClass = "post-card mx-3 cursor-pointer border-x border-line bg-bg px-4 outline-none transition-[background-color,border-color,box-shadow] duration-150 hover:border-line-strong focus-visible:border-accent-text";
+  if (!connectTop && !connectBottom) {
+    // Standalone post: header row on top, then words, then photos edge to edge.
+    return (
+      <article {...cardProps} className={clsx(cardClass, "mt-3 overflow-hidden rounded-2xl border-y pb-1.5 shadow-card")}>
+        {context && <ContextRow context={context} />}
+        <StackedHeader p={p} />
+        {showReplyingTo && p.replyingTo.length > 0 && <ReplyingTo handles={p.replyingTo} />}
+        {p.text && <RichText text={p.text} lang={p.lang} className="mt-2 text-post" />}
+        <PostAttachments p={p} bleed onDoubleTap={onDoubleTap} />
+        <PostActions p={p} />
+      </article>
+    );
+  }
   return (
     <article
-      data-post-id={p.id}
-      tabIndex={0}
-      aria-label={`Post by ${p.author.displayName}`}
-      onClick={open}
-      onKeyDown={(e) => e.key === "Enter" && e.target === e.currentTarget && open(e)}
+      {...cardProps}
       className={clsx(
-        "post-card mx-3 cursor-pointer border-x border-line bg-bg px-4 outline-none transition-[background-color,border-color,box-shadow] duration-150 hover:border-line-strong focus-visible:border-accent-text",
+        cardClass,
         !connectTop && "mt-3 rounded-t-2xl border-t",
         !connectBottom && "rounded-b-2xl border-b shadow-card",
       )}
@@ -155,25 +173,68 @@ function PostCardBody({ p, context, connectTop, connectBottom, showReplyingTo }:
         </div>
         <div className="min-w-0 flex-1 pb-3 pt-3">
           <PostHeader p={p} />
-          {showReplyingTo && p.replyingTo.length > 0 && (
-            <div className="text-fg2">
-              Replying to{" "}
-              {p.replyingTo.map((h, i) => (
-                <span key={h}>
-                  {i > 0 && " "}
-                  <Link href={`/${h}`} className="text-accent-text hover:underline" onClick={(e) => e.stopPropagation()}>
-                    @{h}
-                  </Link>
-                </span>
-              ))}
-            </div>
-          )}
+          {showReplyingTo && p.replyingTo.length > 0 && <ReplyingTo handles={p.replyingTo} />}
           {p.text && <RichText text={p.text} lang={p.lang} className="text-post" />}
-          <PostAttachments p={p} />
+          <PostAttachments p={p} onDoubleTap={onDoubleTap} />
           <PostActions p={p} />
         </div>
       </div>
     </article>
+  );
+}
+
+function ReplyingTo({ handles }: { handles: string[] }) {
+  return (
+    <div className="text-fg2">
+      Replying to{" "}
+      {handles.map((h, i) => (
+        <span key={h}>
+          {i > 0 && " "}
+          <Link href={`/${h}`} className="text-accent-text hover:underline" onClick={(e) => e.stopPropagation()}>
+            @{h}
+          </Link>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/** Double tap on a post's photos cheers it (never un-cheers); guests get the sign-up prompt. */
+function useDoubleTapCheer(p: PostDTO) {
+  const like = useToggle("like");
+  const requireAccount = useRequireAccount();
+  return () => {
+    if (!requireAccount("cheer posts")) return false;
+    if (!p.viewer.liked) like.mutate({ id: p.id, on: true });
+    return true;
+  };
+}
+
+/** Compact header for standalone cards: avatar, name over @handle · time, and the menu. */
+function StackedHeader({ p }: { p: PostDTO }) {
+  return (
+    <div className="flex items-center gap-3 pt-3">
+      <ProfileHoverCard handle={p.author.handle}>
+        <Link href={`/${p.author.handle}`} onClick={(e) => e.stopPropagation()} aria-label={`${p.author.displayName} profile`} className="press shrink-0 rounded-full">
+          <Avatar user={p.author} size={42} />
+        </Link>
+      </ProfileHoverCard>
+      <div className="min-w-0 flex-1 leading-5">
+        <ProfileHoverCard handle={p.author.handle}>
+          <Link href={`/${p.author.handle}`} className="flex min-w-0 max-w-full hover:underline" onClick={(e) => e.stopPropagation()}>
+            <DisplayName user={p.author} />
+          </Link>
+        </ProfileHoverCard>
+        <div className="flex min-w-0 items-baseline gap-1 whitespace-nowrap text-[0.875rem] text-fg2">
+          <span className="min-w-0 truncate">@{p.author.handle}</span>
+          <span aria-hidden="true">·</span>
+          <Link href={postPath(p)} className="shrink-0 hover:underline" title={absoluteTitle(p.createdAt)} onClick={(e) => e.stopPropagation()}>
+            <time dateTime={p.createdAt}>{relativeTime(p.createdAt)}</time>
+          </Link>
+        </div>
+      </div>
+      <PostMenu p={p} />
+    </div>
   );
 }
 
@@ -197,7 +258,16 @@ function PostHeader({ p }: { p: PostDTO }) {
   );
 }
 
-export function PostAttachments({ p, large }: { p: PostDTO; large?: boolean }) {
+export function PostAttachments({ p, large, bleed, onDoubleTap }: { p: PostDTO; large?: boolean; bleed?: boolean; onDoubleTap?: () => boolean }) {
+  const media = (
+    <MediaGrid
+      media={p.media}
+      sensitive={p.sensitive}
+      bleed={bleed}
+      onDoubleTap={onDoubleTap}
+      href={(i) => `${postPath(p)}/${p.media[0].kind === "VIDEO" ? "video" : "photo"}/${i}`}
+    />
+  );
   return (
     <>
       {p.media.length > 0 &&
@@ -205,8 +275,10 @@ export function PostAttachments({ p, large }: { p: PostDTO; large?: boolean }) {
           <div className="mt-3">
             <VideoPlayer media={p.media[0]} large />
           </div>
+        ) : bleed ? (
+          <div className="-mx-4">{media}</div>
         ) : (
-          <MediaGrid media={p.media} sensitive={p.sensitive} href={(i) => `${postPath(p)}/${p.media[0].kind === "VIDEO" ? "video" : "photo"}/${i}`} />
+          media
         ))}
       {p.poll && <PollView p={p} />}
       {p.quoted && <QuotedPost quoted={p.quoted} />}
@@ -337,7 +409,7 @@ type ChipTone = "accent" | "repost" | "like";
 export function chipClass(tone: ChipTone, active?: boolean, disabled?: boolean) {
   const hover = tone === "accent" ? "enabled:hover:bg-accent-soft enabled:hover:text-accent-text" : tone === "repost" ? "enabled:hover:bg-repost-soft enabled:hover:text-repost" : "enabled:hover:bg-like-soft enabled:hover:text-like";
   const activeCls = active ? (tone === "repost" ? "bg-repost-soft text-repost" : tone === "like" ? "bg-like-soft text-like" : "bg-accent-soft text-accent-text") : "text-fg2";
-  return clsx("flex h-8 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium transition-colors disabled:opacity-50", !disabled && hover, activeCls);
+  return clsx("press flex h-8 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium disabled:opacity-50", !disabled && hover, activeCls);
 }
 
 function ChipContent({ icon, text, count, large }: { icon: ReactNode; text: string; count?: number; large?: boolean }) {
@@ -616,6 +688,7 @@ export function PostMenu({ p }: { p: PostDTO }) {
 
 /** Focal post on the detail page: larger text, full timestamp, engagement links. */
 export function FocalPost({ p }: { p: PostDTO }) {
+  const onDoubleTap = useDoubleTapCheer(p);
   const replyAudienceNote =
     p.replyAudience === "FOLLOWING" ? `People @${p.author.handle} follows or mentioned can reply` : p.replyAudience === "MENTIONED" ? `People @${p.author.handle} mentioned can reply` : null;
   return (
@@ -645,7 +718,7 @@ export function FocalPost({ p }: { p: PostDTO }) {
         </div>
       )}
       {p.text && <RichText text={p.text} lang={p.lang} className="mt-3 text-detail" />}
-      <PostAttachments p={p} large />
+      <PostAttachments p={p} large bleed onDoubleTap={onDoubleTap} />
       <div className="my-4 text-fg2">
         <Link href={`/${p.author.handle}/status/${p.id}`} className="hover:underline">
           <time dateTime={p.createdAt}>{fullTime(p.createdAt)}</time>

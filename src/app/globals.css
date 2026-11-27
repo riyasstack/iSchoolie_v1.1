@@ -282,6 +282,50 @@ h1, h2, h3 {
 .like-pop {
   animation: like-pop 180ms var(--ease);
 }
+
+/* Tactile press: controls dip slightly under the finger, then spring back. */
+.press {
+  transition: transform 160ms cubic-bezier(0.2, 0.9, 0.3, 1.4), background-color 150ms, color 150ms, opacity 150ms;
+  -webkit-tap-highlight-color: transparent;
+}
+.press:active:not(:disabled) {
+  transform: scale(0.94);
+  transition-duration: 60ms;
+}
+
+/* Double-tap cheer burst. */
+@keyframes cheer-burst {
+  0% { opacity: 0; transform: scale(0.2) rotate(-18deg); }
+  18% { opacity: 1; transform: scale(1.18) rotate(6deg); }
+  32% { transform: scale(0.94) rotate(0deg); }
+  44% { transform: scale(1.04); }
+  75% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.85) translateY(-14px); }
+}
+.cheer-burst {
+  animation: cheer-burst 900ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes cheer-confetti {
+  0% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--a)) translateY(0) scale(0.4); }
+  20% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--a)) translateY(calc(var(--d) * -1)) scale(1) rotate(160deg); }
+}
+.cheer-confetti {
+  animation: cheer-confetti 700ms 80ms cubic-bezier(0.1, 0.7, 0.3, 1) both;
+}
+
+/* Photos ease in instead of popping. */
+.img-fade {
+  animation: fade-in 320ms var(--ease);
+}
+
+/* Story-style rail ring: unseen gets the iSchoolie gradient; seen goes quiet. */
+.rail-ring {
+  background: conic-gradient(from 200deg, #0071e3, #5856d6, #e8590c, #ff9f0a, #0071e3);
+}
+.rail-ring[data-seen] {
+  background: var(--border-strong);
+}
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
@@ -293,9 +337,14 @@ h1, h2, h3 {
   50% { opacity: 1; }
   100% { opacity: 0.55; }
 }
+@keyframes shimmer-sweep {
+  from { background-position: 150% 0; }
+  to { background-position: -50% 0; }
+}
 .skeleton {
-  background: var(--hover-strong);
-  animation: shimmer 1.4s ease-in-out infinite;
+  background: linear-gradient(100deg, var(--hover-strong) 30%, color-mix(in srgb, var(--hover-strong) 25%, transparent) 50%, var(--hover-strong) 70%);
+  background-size: 200% 100%;
+  animation: shimmer-sweep 1.3s linear infinite;
 }
 
 :root[data-reduced-motion="true"] *,

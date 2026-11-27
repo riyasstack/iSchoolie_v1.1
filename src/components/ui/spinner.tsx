@@ -15,17 +15,24 @@ export function PostSkeleton({ count = 3 }: { count?: number }) {
   return (
     <div aria-hidden="true">
       {Array.from({ length: count }, (_, i) => (
-        <div key={i} className="flex gap-3 border-b border-line px-4 py-3">
-          <div className="skeleton h-12 w-12 shrink-0 rounded-full" />
-          <div className="flex-1 space-y-2 pt-1">
-            <div className="skeleton h-3.5 w-2/5 rounded" />
-            <div className="skeleton h-3.5 w-11/12 rounded" />
-            <div className="skeleton h-3.5 w-3/5 rounded" />
-            <div className="mt-3 flex max-w-[425px] justify-between">
-              {[0, 1, 2, 3].map((k) => (
-                <div key={k} className="skeleton h-3.5 w-8 rounded" />
-              ))}
+        <div key={i} className="mx-3 mt-3 overflow-hidden rounded-2xl border border-line bg-bg px-4 pb-3 pt-3 shadow-card">
+          <div className="flex items-center gap-3">
+            <div className="skeleton h-[42px] w-[42px] shrink-0 rounded-full" />
+            <div className="flex-1 space-y-1.5">
+              <div className="skeleton h-3.5 w-1/3 rounded-md" />
+              <div className="skeleton h-3 w-1/4 rounded-md" />
             </div>
+          </div>
+          <div className="mt-3 space-y-2">
+            <div className="skeleton h-3.5 w-11/12 rounded-md" />
+            <div className="skeleton h-3.5 w-3/5 rounded-md" />
+          </div>
+          {i % 2 === 0 && <div className="skeleton -mx-4 mt-3 aspect-[4/3] max-h-[420px]" />}
+          <div className="mt-3 flex gap-2">
+            {[0, 1, 2].map((k) => (
+              <div key={k} className="skeleton h-7 w-16 rounded-xl" />
+            ))}
+            <div className="skeleton ml-auto h-7 w-16 rounded-xl" />
           </div>
         </div>
       ))}

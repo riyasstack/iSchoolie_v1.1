@@ -11,6 +11,7 @@ import { useToast } from "@/components/ui/toast";
 import { get, patch, errorMessage } from "@/lib/api";
 import { Composer } from "../compose/composer";
 import { Timeline } from "./timeline";
+import { CampusRail } from "./campus-rail";
 import { DemoNotice } from "../demo-controls";
 import Link from "next/link";
 import type { PreferencesDTO, SessionDTO, UserDTO } from "@/lib/types";
@@ -21,6 +22,7 @@ export function HomeView() {
   const toast = useToast();
   const mode = s.preferences.timelineMode;
   const key = ["timeline", mode] as const;
+  const path = mode === "latest" ? "/timeline/latest" : "/timeline/home";
 
   const setMode = async (m: "home" | "latest") => {
     qc.setQueryData<SessionDTO>(["session"], (old) => (old ? { ...old, preferences: { ...old.preferences, timelineMode: m } } : old));
@@ -59,13 +61,14 @@ export function HomeView() {
         }
       />
       <DemoNotice />
+      <CampusRail timelineKey={key} path={path} />
       <div className="hidden sm:block">
         <Composer mode="inline" />
       </div>
       <NewPostsPill timelineKey={key} />
       <Timeline
         queryKey={key}
-        path={mode === "latest" ? "/timeline/latest" : "/timeline/home"}
+        path={path}
         empty={
           <EmptyState
             title="Welcome to iSchoolie!"
