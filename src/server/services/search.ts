@@ -177,7 +177,7 @@ export async function trends(ctx: RequestContext, category?: string | null): Pro
     key: `m:${r.tag}`,
     label: `#${r.tag}`,
     query: `#${r.tag}`,
-    category: "Trending in this demo",
+    category: "Buzzing in this demo",
     source: "measured",
     postCount: Number(r.posts),
     context: null,

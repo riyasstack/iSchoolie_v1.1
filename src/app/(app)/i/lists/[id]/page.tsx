@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { ListView } from "@/features/collections/lists";
 
-export const metadata: Metadata = { title: "List" };
+export const metadata: Metadata = { title: "Circle" };
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

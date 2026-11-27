@@ -107,7 +107,7 @@ export function applyPreferences(p: Pick<PreferencesDTO, "theme" | "accent" | "f
   el.dataset.reducedMotion = String(p.reducedMotion);
   el.style.setProperty("--font-scale", String(p.fontScale));
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute("content", p.theme === "DIM" ? "#15202b" : p.theme === "LIGHTS_OUT" ? "#000000" : "#ffffff");
+  if (meta) meta.setAttribute("content", p.theme === "DIM" ? "#17162a" : p.theme === "LIGHTS_OUT" ? "#07070c" : "#f3f2fa");
 }
 
 export function SessionGate({ children }: { children: ReactNode }) {
@@ -229,12 +229,12 @@ function SignUpPrompt({ action, onClose }: { action: string | null; onClose: () 
     <Dialog open={action !== null} onOpenChange={(o) => !o && onClose()} title="Join iSchoolie" hideTitle width={420}>
       <div className="flex flex-col items-center px-8 pb-8 pt-2 text-center" data-testid="signup-prompt">
         <img src="/brand/ischoolie-symbol.png" alt="" width={44} height={44} />
-        <h2 className="mt-4 text-[23px] font-extrabold leading-tight">Don’t miss what’s happening</h2>
+        <h2 className="mt-4 text-[23px] font-extrabold leading-tight">Your campus is talking</h2>
         <p className="mt-2 text-fg2">You’re browsing as a guest. Sign up or log in to {action ?? "join the conversation"}.</p>
-        <Link href={`/signup${ret}`} onClick={onClose} className="mt-6 inline-flex min-h-[44px] w-full items-center justify-center rounded-full bg-accent px-4 font-bold text-accent-on hover:bg-accent-hover">
+        <Link href={`/signup${ret}`} onClick={onClose} className="mt-6 inline-flex min-h-[44px] w-full items-center justify-center rounded-xl bg-accent px-4 font-semibold text-accent-on hover:bg-accent-hover">
           Sign up
         </Link>
-        <Link href={`/signin${ret}`} onClick={onClose} className="mt-3 inline-flex min-h-[44px] w-full items-center justify-center rounded-full border border-accent px-4 font-bold text-accent-text hover:bg-accent-soft">
+        <Link href={`/signin${ret}`} onClick={onClose} className="mt-3 inline-flex min-h-[44px] w-full items-center justify-center rounded-xl border border-accent px-4 font-semibold text-accent-text hover:bg-accent-soft">
           Log in
         </Link>
       </div>

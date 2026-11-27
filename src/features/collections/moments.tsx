@@ -42,14 +42,14 @@ export function MomentsView() {
   const q = useQuery({ queryKey: ["moments"], queryFn: () => get<{ mine: MomentDTO[]; discover: MomentDTO[] }>("/moments") });
   return (
     <div>
-      <PageHeader title="Moments" back right={<Link href="/i/moments/create" aria-label="Create new Moment" title="Create new Moment" className="grid h-[34px] w-[34px] place-items-center rounded-full text-accent-text hover:bg-accent-soft"><Plus size={22} /></Link>} />
+      <PageHeader title="Stories" back right={<Link href="/i/moments/create" aria-label="Create new Story" title="Create new Story" className="grid h-[34px] w-[34px] place-items-center rounded-xl text-accent-text hover:bg-accent-soft"><Plus size={22} /></Link>} />
       {q.isPending && <Spinner className="py-8" />}
       {q.isError && <ErrorState message={errorMessage(q.error)} onRetry={() => q.refetch()} />}
       {q.data && (
         <>
-          <SectionHeading>Your Moments</SectionHeading>
+          <SectionHeading>Your Stories</SectionHeading>
           {q.data.mine.length ? q.data.mine.map((m) => <MomentCard key={m.id} m={m} />) : (
-            <EmptyState title="Create your first Moment" body="Moments are curated collections of posts that tell a story." action={<Link href="/i/moments/create"><Button>Create new Moment</Button></Link>} />
+            <EmptyState title="Create your first Story" body="Stories are curated collections of posts that tell a story." action={<Link href="/i/moments/create"><Button>Create new Story</Button></Link>} />
           )}
           {q.data.discover.length > 0 && (
             <>
@@ -80,24 +80,24 @@ export function MomentView({ id }: { id: string }) {
     mutationFn: () => del(`/moments/${id}`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["moments"] });
-      toast({ text: "Moment deleted" });
+      toast({ text: "Story deleted" });
       router.push("/i/moments");
     },
     onError: (e) => toast({ text: errorMessage(e), tone: "error" }),
   });
-  if (q.isPending) return <div><PageHeader title="Moment" back /><Spinner className="py-8" /></div>;
-  if (q.isError) return <div><PageHeader title="Moment" back />{q.error instanceof ApiError && q.error.status === 404 ? <EmptyState title="This Moment isn’t available" body="It may be an unpublished draft or deleted." /> : <ErrorState message={errorMessage(q.error)} onRetry={() => q.refetch()} />}</div>;
+  if (q.isPending) return <div><PageHeader title="Story" back /><Spinner className="py-8" /></div>;
+  if (q.isError) return <div><PageHeader title="Story" back />{q.error instanceof ApiError && q.error.status === 404 ? <EmptyState title="This Story isn’t available" body="It may be an unpublished draft or deleted." /> : <ErrorState message={errorMessage(q.error)} onRetry={() => q.refetch()} />}</div>;
   const { moment: m, items } = q.data;
   return (
     <div>
       <PageHeader
-        title="Moment"
+        title="Story"
         back
         right={
           m.isOwner ? (
-            <Menu label="More" trigger={<button type="button" aria-label="More" className="grid h-[34px] w-[34px] place-items-center rounded-full text-accent-text hover:bg-accent-soft"><MoreHorizontal size={20} /></button>}>
-              <MenuItem icon={<Pencil />} href={`/i/moments/${m.id}/edit`}>Edit Moment</MenuItem>
-              <MenuItem icon={<Trash2 />} danger onSelect={() => setConfirm(true)}>Delete Moment</MenuItem>
+            <Menu label="More" trigger={<button type="button" aria-label="More" className="grid h-[34px] w-[34px] place-items-center rounded-xl text-accent-text hover:bg-accent-soft"><MoreHorizontal size={20} /></button>}>
+              <MenuItem icon={<Pencil />} href={`/i/moments/${m.id}/edit`}>Edit Story</MenuItem>
+              <MenuItem icon={<Trash2 />} danger onSelect={() => setConfirm(true)}>Delete Story</MenuItem>
             </Menu>
           ) : undefined
         }
@@ -117,9 +117,9 @@ export function MomentView({ id }: { id: string }) {
           {m.publishedAt && <span>· {relativeTime(m.publishedAt)}</span>}
         </Link>
       </header>
-      {items.length === 0 && <EmptyState title="This Moment is empty" />}
+      {items.length === 0 && <EmptyState title="This Story is empty" />}
       {items.map((it, i) => ("post" in it ? <PostCard key={it.post.id} postId={it.post.id} /> : <div key={`u${i}`} className="border-b border-line py-1"><UnavailablePost reason={it.unavailable.unavailable} /></div>))}
-      <ConfirmDialog open={confirm} onOpenChange={setConfirm} title="Delete Moment?" body="This can’t be undone." confirmLabel="Delete" danger busy={remove.isPending} onConfirm={() => remove.mutate()} />
+      <ConfirmDialog open={confirm} onOpenChange={setConfirm} title="Delete Story?" body="This can’t be undone." confirmLabel="Delete" danger busy={remove.isPending} onConfirm={() => remove.mutate()} />
     </div>
   );
 }
@@ -156,18 +156,18 @@ export function MomentEditor({ id }: { id?: string }) {
     onSuccess: (d, publish) => {
       qc.invalidateQueries({ queryKey: ["moments"] });
       qc.setQueryData(["moment", d.moment.id], d);
-      toast({ text: publish ? "Moment published" : publish === false ? "Moment unpublished" : "Moment saved" });
+      toast({ text: publish ? "Story published" : publish === false ? "Story unpublished" : "Story saved" });
       router.push(publish || d.moment.publishedAt ? `/i/moments/${d.moment.id}` : `/i/moments/${d.moment.id}/edit`);
     },
     onError: (e) => setError(errorMessage(e)),
   });
-  if (id && existing.isError) return <div><PageHeader title="Edit Moment" back /><ErrorState message={errorMessage(existing.error)} /></div>;
-  if (!form) return <div><PageHeader title="Edit Moment" back /><Spinner className="py-8" /></div>;
-  if (id && existing.data && !existing.data.moment.isOwner) return <div><PageHeader title="Edit Moment" back /><EmptyState title="You can’t edit this Moment" /></div>;
+  if (id && existing.isError) return <div><PageHeader title="Edit Story" back /><ErrorState message={errorMessage(existing.error)} /></div>;
+  if (!form) return <div><PageHeader title="Edit Story" back /><Spinner className="py-8" /></div>;
+  if (id && existing.data && !existing.data.moment.isOwner) return <div><PageHeader title="Edit Story" back /><EmptyState title="You can’t edit this Story" /></div>;
   const has = new Set(form.posts.map((p) => p.id));
   const add = (p: PostDTO) => {
     if (has.has(p.id)) return;
-    if (p.author.isProtected) return setError("Posts from protected accounts can’t be added to Moments.");
+    if (p.author.isProtected) return setError("Posts from protected accounts can’t be added to Stories.");
     setForm({ ...form, posts: [...form.posts, p] });
   };
   const move = (i: number, d: number) => {
@@ -181,7 +181,7 @@ export function MomentEditor({ id }: { id?: string }) {
   return (
     <div>
       <PageHeader
-        title={id ? "Edit Moment" : "Create new Moment"}
+        title={id ? "Edit Story" : "Create new Story"}
         back
         right={
           <div className="flex gap-2">
@@ -195,8 +195,8 @@ export function MomentEditor({ id }: { id?: string }) {
       <div className="relative aspect-[2/1] max-h-[260px] w-full overflow-hidden bg-line-strong">
         {form.coverUrl && <img src={form.coverUrl} alt="" className="h-full w-full object-cover" />}
         <div className="absolute inset-0 flex items-center justify-center gap-3 bg-black/30">
-          <button type="button" aria-label="Set cover image" onClick={() => file.current?.click()} className="grid h-11 w-11 place-items-center rounded-full bg-black/60 text-white">{uploading ? <Spinner size={20} /> : <Camera size={20} />}</button>
-          {form.coverMediaId && <button type="button" aria-label="Remove cover image" onClick={() => setForm({ ...form, coverMediaId: null, coverUrl: null })} className="grid h-11 w-11 place-items-center rounded-full bg-black/60 text-white"><X size={20} /></button>}
+          <button type="button" aria-label="Set cover image" onClick={() => file.current?.click()} className="grid h-11 w-11 place-items-center rounded-xl bg-black/60 text-white">{uploading ? <Spinner size={20} /> : <Camera size={20} />}</button>
+          {form.coverMediaId && <button type="button" aria-label="Remove cover image" onClick={() => setForm({ ...form, coverMediaId: null, coverUrl: null })} className="grid h-11 w-11 place-items-center rounded-xl bg-black/60 text-white"><X size={20} /></button>}
         </div>
         <input
           ref={file}
@@ -232,9 +232,9 @@ export function MomentEditor({ id }: { id?: string }) {
               <div className="flex items-center gap-1 text-sm"><DisplayName user={p.author} /> <span className="text-fg2">@{p.author.handle}</span></div>
               <p className="line-clamp-2 text-sm break-anywhere">{p.text || "(Media)"}</p>
             </div>
-            <button type="button" aria-label="Move up" disabled={i === 0} onClick={() => move(i, -1)} className="grid h-8 w-8 place-items-center rounded-full text-accent-text hover:bg-accent-soft disabled:opacity-30"><ArrowUp size={16} /></button>
-            <button type="button" aria-label="Move down" disabled={i === form.posts.length - 1} onClick={() => move(i, 1)} className="grid h-8 w-8 place-items-center rounded-full text-accent-text hover:bg-accent-soft disabled:opacity-30"><ArrowDown size={16} /></button>
-            <button type="button" aria-label="Remove from Moment" onClick={() => setForm({ ...form, posts: form.posts.filter((x) => x.id !== p.id) })} className="grid h-8 w-8 place-items-center rounded-full text-danger hover:bg-like-soft"><X size={16} /></button>
+            <button type="button" aria-label="Move up" disabled={i === 0} onClick={() => move(i, -1)} className="grid h-8 w-8 place-items-center rounded-xl text-accent-text hover:bg-accent-soft disabled:opacity-30"><ArrowUp size={16} /></button>
+            <button type="button" aria-label="Move down" disabled={i === form.posts.length - 1} onClick={() => move(i, 1)} className="grid h-8 w-8 place-items-center rounded-xl text-accent-text hover:bg-accent-soft disabled:opacity-30"><ArrowDown size={16} /></button>
+            <button type="button" aria-label="Remove from Story" onClick={() => setForm({ ...form, posts: form.posts.filter((x) => x.id !== p.id) })} className="grid h-8 w-8 place-items-center rounded-xl text-danger hover:bg-like-soft"><X size={16} /></button>
           </li>
         ))}
       </ol>
@@ -242,7 +242,7 @@ export function MomentEditor({ id }: { id?: string }) {
       <div className="flex gap-2 px-4 pb-2">
         {(["likes", "mine", "link"] as const).map((s) => (
           <Button key={s} size="sm" variant={source === s ? "primary" : "neutral"} onClick={() => setSource(s)}>
-            {s === "likes" ? "Your likes" : s === "mine" ? "Your posts" : "By link"}
+            {s === "likes" ? "Your cheers" : s === "mine" ? "Your posts" : "By link"}
           </Button>
         ))}
       </div>
@@ -264,7 +264,7 @@ export function MomentEditor({ id }: { id?: string }) {
             }
           }}
         >
-          <input value={link} onChange={(e) => setLink(e.target.value)} placeholder="Paste a post link" aria-label="Post link" className="h-10 min-w-0 flex-1 rounded-full bg-input px-4 outline-none" />
+          <input value={link} onChange={(e) => setLink(e.target.value)} placeholder="Paste a post link" aria-label="Post link" className="h-10 min-w-0 flex-1 rounded-xl bg-input px-4 outline-none" />
           <Button type="submit" size="sm">Add</Button>
         </form>
       ) : (

@@ -1,12 +1,16 @@
 import type { Metadata, Viewport } from "next";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { tryResolveRequestContext } from "@/server/context";
 import { getPreferences } from "@/server/services/account";
 
+/** Campus Cards typeface (variable font, self-hosted by next/font at build time). */
+const campusFont = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-campus", display: "swap" });
+
 export const metadata: Metadata = {
   title: { default: "iSchoolie", template: "%s / iSchoolie" },
-  description: "iSchoolie — a social network demo with fictional people and posts.",
+  description: "iSchoolie — a campus social network for classmates, clubs and study groups.",
   applicationName: "iSchoolie",
   manifest: "/manifest.webmanifest",
   robots: { index: false, follow: false },
@@ -16,7 +20,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#ffffff",
+  themeColor: "#f3f2fa",
   interactiveWidget: "resizes-content",
 };
 
@@ -38,6 +42,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html
       lang="en"
+      className={campusFont.variable}
       data-theme={p?.theme ?? "DEFAULT"}
       data-accent={p?.accent ?? "brand"}
       data-reduced-motion={String(p?.reducedMotion ?? false)}

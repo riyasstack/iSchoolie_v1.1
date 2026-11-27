@@ -121,24 +121,24 @@ function EngagementTabs({ handle, id, active }: { handle: string; id: string; ac
     <RouteTabs
       active={active}
       tabs={[
-        { key: "quotes", label: "Quote Posts", href: `/${handle}/status/${id}/quotes` },
-        { key: "reposts", label: "Reposts", href: `/${handle}/status/${id}/reposts` },
-        { key: "likes", label: "Likes", href: `/${handle}/status/${id}/likes` },
+        { key: "quotes", label: "Quote shares", href: `/${handle}/status/${id}/quotes` },
+        { key: "reposts", label: "Shares", href: `/${handle}/status/${id}/reposts` },
+        { key: "likes", label: "Cheers", href: `/${handle}/status/${id}/likes` },
       ]}
     />
   );
 }
 
 export function EngagementView({ id, handle, kind }: { id: string; handle: string; kind: "likes" | "reposts" | "quotes" }) {
-  const title = kind === "likes" ? "Liked by" : kind === "reposts" ? "Reposted by" : "Quote Posts";
+  const title = kind === "likes" ? "Cheered by" : kind === "reposts" ? "Shared by" : "Quote shares";
   return (
     <div>
       <PageHeader title={title} back={`/${handle}/status/${id}`} />
       <EngagementTabs handle={handle} id={id} active={kind} />
       {kind === "quotes" ? (
-        <Timeline queryKey={["quotes", id]} path={`/posts/${id}/quotes`} empty={<EmptyState title="No Quote Posts yet" body="When someone quotes this post, it’ll show up here." />} />
+        <Timeline queryKey={["quotes", id]} path={`/posts/${id}/quotes`} empty={<EmptyState title="No Quote shares yet" body="When someone quotes this post, it’ll show up here." />} />
       ) : (
-        <PeopleList queryKey={["engagement", kind, id]} path={`/posts/${id}/${kind}`} empty={kind === "likes" ? "No likes yet" : "No reposts yet"} emptyBody={kind === "likes" ? "When someone likes this post, they’ll show up here." : "When someone reposts this post, they’ll show up here."} />
+        <PeopleList queryKey={["engagement", kind, id]} path={`/posts/${id}/${kind}`} empty={kind === "likes" ? "No cheers yet" : "No shares yet"} emptyBody={kind === "likes" ? "When someone cheers this post, they’ll show up here." : "When someone shares this post, they’ll show up here."} />
       )}
     </div>
   );

@@ -47,7 +47,7 @@ export function FollowButton({ user, relationship, size = "md", onChange }: { us
   let btn;
   if (rel.blocking) {
     btn = (
-      <button type="button" onClick={(e) => { e.stopPropagation(); setConfirm("unblock"); }} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} className={clsx("rounded-full bg-danger font-bold text-white hover:bg-danger-hover", h)}>
+      <button type="button" onClick={(e) => { e.stopPropagation(); setConfirm("unblock"); }} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} className={clsx("rounded-xl bg-danger font-semibold text-white hover:bg-danger-hover", h)}>
         {hover ? "Unblock" : "Blocked"}
       </button>
     );
@@ -59,14 +59,14 @@ export function FollowButton({ user, relationship, size = "md", onChange }: { us
         onClick={(e) => { e.stopPropagation(); setConfirm("unfollow"); }}
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
-        className={clsx("min-w-[102px] rounded-full font-bold", h, hover ? "bg-danger text-white" : "bg-accent text-accent-on")}
+        className={clsx("min-w-[102px] rounded-xl border font-semibold transition-colors", h, hover ? "border-danger bg-like-soft text-danger" : "border-line-strong bg-subtle text-fg")}
       >
         {hover ? "Unfollow" : "Following"}
       </button>
     );
   } else if (rel.requested) {
     btn = (
-      <button type="button" onClick={(e) => { e.stopPropagation(); setConfirm("cancel"); }} className={clsx("rounded-full border border-accent font-bold text-accent-text hover:bg-accent-soft", h)}>
+      <button type="button" onClick={(e) => { e.stopPropagation(); setConfirm("cancel"); }} className={clsx("rounded-xl border border-line-strong font-semibold text-fg2 hover:bg-hover-strong", h)}>
         Pending
       </button>
     );
@@ -74,7 +74,7 @@ export function FollowButton({ user, relationship, size = "md", onChange }: { us
     btn = null;
   } else {
     btn = (
-      <button type="button" disabled={m.isPending} onClick={(e) => { e.stopPropagation(); m.mutate("follow"); }} className={clsx("rounded-full border border-accent font-bold text-accent-text hover:bg-accent-soft disabled:opacity-50", h)}>
+      <button type="button" disabled={m.isPending} onClick={(e) => { e.stopPropagation(); m.mutate("follow"); }} className={clsx("rounded-xl bg-accent font-semibold text-accent-on hover:bg-accent-hover disabled:opacity-50", h)}>
         Follow
       </button>
     );

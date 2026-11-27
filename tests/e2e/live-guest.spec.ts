@@ -12,11 +12,11 @@ test.describe("live mode — guest", () => {
     await expect(page.getByTestId("guest-bar")).toBeVisible();
     await expect(page.getByTestId("guest-composer")).toBeVisible();
     // No account-only navigation for guests.
-    await expect(page.getByRole("link", { name: "Notifications" })).toHaveCount(0);
-    await expect(page.getByRole("link", { name: "Messages" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Alerts" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Inbox" })).toHaveCount(0);
 
     const firstPost = page.getByRole("article").first();
-    for (const name of [/^Like/, /^Reply/, /^Repost/]) {
+    for (const name of [/^Cheer/, /^Reply/, /^Share/]) {
       await firstPost.getByRole("button", { name }).first().click();
       const prompt = page.getByTestId("signup-prompt");
       await expect(prompt).toBeVisible();

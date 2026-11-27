@@ -58,11 +58,11 @@ export function ComposeModal() {
 function ComposeChrome({ onClose }: { onClose: () => void }) {
   return (
     <div className="flex h-[53px] shrink-0 items-center justify-between border-b border-line px-2">
-      <button type="button" aria-label="Close" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-full text-accent-text hover:bg-accent-soft">
+      <button type="button" aria-label="Close" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-xl text-accent-text hover:bg-accent-soft">
         <X size={20} />
       </button>
       <R.Title className="sr-only">Compose post</R.Title>
-      <Link href="/compose/drafts" className="rounded-full px-3 py-1.5 text-sm font-bold text-accent-text hover:bg-accent-soft">
+      <Link href="/compose/drafts" className="rounded-xl px-3 py-1.5 text-sm font-semibold text-accent-text hover:bg-accent-soft">
         Unsent posts
       </Link>
     </div>
@@ -76,7 +76,7 @@ export function ComposePage() {
   const close = useRef<() => void>(() => router.push("/home"));
   return (
     <div>
-      <PageHeader title={p.reply ? "Reply" : p.quote ? "Quote Post" : p.scheduled ? "Edit scheduled post" : "Compose post"} back right={<Link href="/compose/drafts" className="text-sm font-bold text-accent-text hover:underline">Unsent posts</Link>} />
+      <PageHeader title={p.reply ? "Reply" : p.quote ? "Quote share" : p.scheduled ? "Edit scheduled post" : "Compose post"} back right={<Link href="/compose/drafts" className="text-sm font-bold text-accent-text hover:underline">Unsent posts</Link>} />
       <Composer mode="modal" replyToId={p.reply} quoteId={p.quote} draftId={p.draft} scheduledId={p.scheduled} registerClose={(fn) => (close.current = fn)} onDone={() => router.push("/home")} />
     </div>
   );
@@ -125,10 +125,10 @@ export function DraftsPage() {
                 Saved {relativeTime(d.updatedAt)} ago
               </p>
             </Link>
-            <Link href={`/compose/post?draft=${d.id}`} aria-label="Edit draft" className="grid h-9 w-9 place-items-center rounded-full text-accent-text hover:bg-accent-soft">
+            <Link href={`/compose/post?draft=${d.id}`} aria-label="Edit draft" className="grid h-9 w-9 place-items-center rounded-xl text-accent-text hover:bg-accent-soft">
               <Pencil size={18} />
             </Link>
-            <button type="button" aria-label="Delete draft" onClick={() => setConfirm(d.id)} className="grid h-9 w-9 place-items-center rounded-full text-danger hover:bg-like-soft">
+            <button type="button" aria-label="Delete draft" onClick={() => setConfirm(d.id)} className="grid h-9 w-9 place-items-center rounded-xl text-danger hover:bg-like-soft">
               <Trash2 size={18} />
             </button>
           </li>
@@ -170,10 +170,10 @@ export function ScheduledPage() {
               </p>
               <p className="mt-1 line-clamp-3 break-anywhere">{s.payload.items[0]?.text || "(No text)"}</p>
             </Link>
-            <Link href={`/compose/post?scheduled=${s.id}`} aria-label="Edit or reschedule" className="grid h-9 w-9 place-items-center rounded-full text-accent-text hover:bg-accent-soft">
+            <Link href={`/compose/post?scheduled=${s.id}`} aria-label="Edit or reschedule" className="grid h-9 w-9 place-items-center rounded-xl text-accent-text hover:bg-accent-soft">
               <Pencil size={18} />
             </Link>
-            <button type="button" aria-label="Cancel scheduled post" onClick={() => setConfirm(s.id)} className="grid h-9 w-9 place-items-center rounded-full text-danger hover:bg-like-soft">
+            <button type="button" aria-label="Cancel scheduled post" onClick={() => setConfirm(s.id)} className="grid h-9 w-9 place-items-center rounded-xl text-danger hover:bg-like-soft">
               <Trash2 size={18} />
             </button>
           </li>

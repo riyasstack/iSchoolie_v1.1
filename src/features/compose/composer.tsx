@@ -144,11 +144,11 @@ export function Composer(props: ComposerProps) {
 function GuestComposer({ reply, modal }: { reply: boolean; modal: boolean }) {
   const ret = useReturnTo();
   return (
-    <div className={modal ? "px-6 py-8 text-center" : "flex items-center justify-between gap-3 border-b border-line px-4 py-3"} data-testid="guest-composer">
-      <p className={modal ? "mb-4 text-fg2" : "text-fg2"}>{reply ? "Sign up or log in to reply." : "Sign up or log in to post on iSchoolie."}</p>
+    <div className={modal ? "px-6 py-8 text-center" : "mx-3 mt-3 flex items-center justify-between gap-3 rounded-2xl border border-dashed border-line-strong bg-bg px-4 py-3"} data-testid="guest-composer">
+      <p className={modal ? "mb-4 text-fg2" : "text-fg2"}>{reply ? "Join iSchoolie or log in to reply." : "Join iSchoolie or log in to share with your campus."}</p>
       <div className={modal ? "flex justify-center gap-3" : "flex shrink-0 gap-2"}>
-        <a href={`/signin${ret}`} className="inline-flex min-h-[32px] items-center rounded-full border border-accent px-4 text-sm font-bold text-accent-text hover:bg-accent-soft">Log in</a>
-        <a href={`/signup${ret}`} className="inline-flex min-h-[32px] items-center rounded-full bg-accent px-4 text-sm font-bold text-accent-on hover:bg-accent-hover">Sign up</a>
+        <a href={`/signin${ret}`} className="inline-flex min-h-[34px] items-center rounded-xl border border-line-strong px-4 text-sm font-semibold text-fg hover:bg-hover-strong">Log in</a>
+        <a href={`/signup${ret}`} className="inline-flex min-h-[34px] items-center rounded-xl bg-accent px-4 text-sm font-semibold text-accent-on hover:bg-accent-hover">Join iSchoolie</a>
       </div>
     </div>
   );
@@ -476,14 +476,14 @@ function MemberComposer({ mode, replyToId = null, quoteId = null, draftId: initi
   };
 
   const isReply = !!replyToId;
-  const submitLabel = schedule ? (scheduledId ? "Update" : "Schedule") : items.length > 1 ? "Post all" : isReply ? "Reply" : "Post";
+  const submitLabel = schedule ? (scheduledId ? "Update" : "Schedule") : items.length > 1 ? "Publish all" : isReply ? "Reply" : "Publish";
   const compact = mode === "inline" && !focused && !dirty;
 
   if (!loaded) return <div className="p-6 text-center text-fg2">Loading…</div>;
 
   return (
     <div
-      className={clsx("flex flex-col", mode === "inline" && "border-b-[10px] border-subtle")}
+      className={clsx("flex flex-col", mode === "inline" && "mx-3 mt-3 rounded-2xl border border-line bg-bg shadow-card")}
       onDragOver={(e: DragEvent) => {
         if (e.dataTransfer.types.includes("Files")) e.preventDefault();
       }}
@@ -518,7 +518,7 @@ function MemberComposer({ mode, replyToId = null, quoteId = null, draftId: initi
           me={session.actor}
           compact={compact}
           isReply={isReply && idx === 0}
-          placeholder={idx === 0 ? (isReply ? "Post your reply" : quoteId ? "Add a comment" : "What’s happening?") : "Add another post"}
+          placeholder={idx === 0 ? (isReply ? "Write your reply…" : quoteId ? "Add your note…" : "Share something with your campus…") : "Add another post to the thread"}
           setRef={(el) => (textareas.current[it.key] = el)}
           onFocus={() => {
             setActive(idx);
@@ -591,7 +591,7 @@ function MemberComposer({ mode, replyToId = null, quoteId = null, draftId: initi
           <EmojiPicker
             onPick={(e) => insertAtCaret(active, e)}
             trigger={
-              <button type="button" aria-label="Emoji" title="Emoji" className="grid h-9 w-9 place-items-center rounded-full text-accent-text hover:bg-accent-soft">
+              <button type="button" aria-label="Emoji" title="Emoji" className="grid h-9 w-9 place-items-center rounded-xl text-accent-text hover:bg-accent-soft">
                 <Smile size={20} />
               </button>
             }
@@ -613,7 +613,7 @@ function MemberComposer({ mode, replyToId = null, quoteId = null, draftId: initi
                   setItems((p) => [...p, newItem()]);
                   setActive(items.length);
                 }}
-                className="grid h-[30px] w-[30px] place-items-center rounded-full border border-line-strong text-accent-text hover:bg-accent-soft disabled:opacity-40"
+                className="grid h-[30px] w-[30px] place-items-center rounded-xl border border-line-strong text-accent-text hover:bg-accent-soft disabled:opacity-40"
               >
                 <Plus size={18} />
               </button>
@@ -626,7 +626,7 @@ function MemberComposer({ mode, replyToId = null, quoteId = null, draftId: initi
       )}
       {mode === "inline" && compact && (
         <div className="-mt-1 flex justify-end px-4 pb-3">
-          <Button disabled>{isReply ? "Reply" : "Post"}</Button>
+          <Button disabled>{isReply ? "Reply" : "Publish"}</Button>
         </div>
       )}
       <GifPicker open={gifOpen} onClose={() => setGifOpen(false)} onPick={pickGif} />
@@ -683,7 +683,7 @@ function ReplyContext({ p }: { p: PostDTO }) {
 
 function ToolButton({ label, onClick, disabled, disabledReason, children }: { label: string; onClick: () => void; disabled?: boolean; disabledReason?: string; children: React.ReactNode }) {
   return (
-    <button type="button" aria-label={disabled && disabledReason ? `${label} (unavailable: ${disabledReason})` : label} title={disabled ? disabledReason : label} onClick={onClick} disabled={disabled} className="grid h-9 w-9 place-items-center rounded-full text-accent-text hover:bg-accent-soft disabled:opacity-40">
+    <button type="button" aria-label={disabled && disabledReason ? `${label} (unavailable: ${disabledReason})` : label} title={disabled ? disabledReason : label} onClick={onClick} disabled={disabled} className="grid h-9 w-9 place-items-center rounded-xl text-accent-text hover:bg-accent-soft disabled:opacity-40">
       {children}
     </button>
   );
@@ -724,7 +724,7 @@ function AudienceMenu({ value, onChange }: { value: ReplyAudience; onChange: (v:
         align="start"
         label="Who can reply"
         trigger={
-          <button type="button" className="-ml-3 flex items-center gap-1 rounded-full px-3 py-1 text-sm font-bold text-accent-text hover:bg-accent-soft">
+          <button type="button" className="-ml-3 flex items-center gap-1 rounded-lg px-3 py-1 text-sm font-semibold text-accent-text hover:bg-accent-soft">
             {cur.icon} {value === "EVERYONE" ? "Everyone can reply" : value === "FOLLOWING" ? "People you follow can reply" : "Only people you mention can reply"}
           </button>
         }
@@ -826,7 +826,7 @@ function ItemEditor(props: EditorProps) {
           });
         }} />}
         {count > 1 && idx > 0 && (
-          <button type="button" aria-label="Remove this post from the thread" onClick={props.onRemove} className="absolute right-0 top-2 grid h-8 w-8 place-items-center rounded-full text-accent-text hover:bg-accent-soft">
+          <button type="button" aria-label="Remove this post from the thread" onClick={props.onRemove} className="absolute right-0 top-2 grid h-8 w-8 place-items-center rounded-xl text-accent-text hover:bg-accent-soft">
             <X size={18} />
           </button>
         )}
@@ -840,11 +840,11 @@ function ItemEditor(props: EditorProps) {
                    
                   <img src={u.preview} alt={u.media?.alt || "Attachment preview"} className="h-full w-full object-cover" />
                 )}
-                <button type="button" aria-label="Remove media" onClick={() => props.onRemoveUpload(u.localId)} className="absolute left-1 top-1 grid h-8 w-8 place-items-center rounded-full bg-black/75 text-white hover:bg-black/60">
+                <button type="button" aria-label="Remove media" onClick={() => props.onRemoveUpload(u.localId)} className="absolute left-1 top-1 grid h-8 w-8 place-items-center rounded-xl bg-black/75 text-white hover:bg-black/60">
                   <X size={18} />
                 </button>
                 {u.status === "ready" && u.media && u.kind !== "VIDEO" && (
-                  <button type="button" onClick={() => setAltFor(u.media!)} className="absolute bottom-1 left-1 rounded-full bg-black/75 px-3 py-1 text-sm font-bold text-white hover:bg-black/60" aria-label={u.media.alt ? `Edit image description: ${u.media.alt}` : "Add image description"}>
+                  <button type="button" onClick={() => setAltFor(u.media!)} className="absolute bottom-1 left-1 rounded-xl bg-black/75 px-3 py-1 text-sm font-semibold text-white hover:bg-black/60" aria-label={u.media.alt ? `Edit image description: ${u.media.alt}` : "Add image description"}>
                     {u.media.alt ? "ALT ✓" : "+ ALT"}
                   </button>
                 )}
@@ -866,7 +866,7 @@ function ItemEditor(props: EditorProps) {
                     <div>
                       <p>{u.error ?? "Upload failed."}</p>
                       {u.file && (
-                        <button type="button" className="mt-2 rounded-full bg-white px-3 py-1 font-bold text-black" onClick={() => props.onRetryUpload(u)}>
+                        <button type="button" className="mt-2 rounded-xl bg-white px-3 py-1 font-semibold text-black" onClick={() => props.onRetryUpload(u)}>
                           Retry
                         </button>
                       )}
@@ -942,7 +942,7 @@ function PollEditor({ poll, onChange }: { poll: PollState; onChange: (p: PollSta
               <input value={c} maxLength={POLL_CHOICE_MAX * 2} onChange={(e) => set({ choices: poll.choices.map((x, j) => (j === i ? e.target.value : x)) })} className="w-full bg-transparent pb-2 outline-none" />
             </label>
             {i === poll.choices.length - 1 && poll.choices.length < 4 ? (
-              <button type="button" aria-label="Add a choice" onClick={() => set({ choices: [...poll.choices, ""] })} className="grid h-9 w-9 place-items-center rounded-full text-accent-text hover:bg-accent-soft">
+              <button type="button" aria-label="Add a choice" onClick={() => set({ choices: [...poll.choices, ""] })} className="grid h-9 w-9 place-items-center rounded-xl text-accent-text hover:bg-accent-soft">
                 <Plus size={20} />
               </button>
             ) : (

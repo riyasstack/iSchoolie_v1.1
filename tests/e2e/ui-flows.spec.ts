@@ -13,9 +13,9 @@ test("engagement pages, hidden replies link and post activity dialog", async ({ 
   await page.goto(`/prof_lindqvist/status/${p.id}`);
   await page.getByRole("link", { name: /Likes?$/ }).first().click();
   await expect(page).toHaveURL(/\/likes$/);
-  await expect(page.getByRole("heading", { name: "Liked by" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Cheered by" })).toBeVisible();
   await expect(page.locator("#main").getByRole("link", { name: /profile$/ }).first()).toBeVisible();
-  await page.getByRole("link", { name: "Quote Posts" }).click();
+  await page.getByRole("link", { name: "Quote shares" }).click();
   await expect(page.locator("article").first()).toBeVisible();
   // Hidden replies view from the seeded hidden reply on Maya's post.
   const own = await findPost(page, "from:maya_learns study group members");
@@ -67,8 +67,8 @@ test("mute a conversation and add an author to a list from the post menu", async
   await expect(page.getByText(/won’t get notifications from this conversation/)).toBeVisible();
   expect((await api<PostDTO>(page.request, "GET", `/posts/${p.id}`)).viewer.conversationMuted).toBe(true);
   await card.getByRole("button", { name: "More" }).click();
-  await page.getByRole("menuitem", { name: /Add\/remove @zara_designs from Lists/ }).click();
-  const dialog = page.getByRole("dialog", { name: "Pick a List" });
+  await page.getByRole("menuitem", { name: /Add\/remove @zara_designs from Circles/ }).click();
+  const dialog = page.getByRole("dialog", { name: "Pick a Circle" });
   await dialog.getByRole("button", { name: /Science teachers/ }).click();
   await expect(dialog.getByRole("button", { name: /Science teachers/ })).toHaveAttribute("aria-pressed", "true");
 });
@@ -77,8 +77,8 @@ test("share a post by direct message", async ({ page }) => {
   await openApp(page, "/home");
   const p = await findPost(page, "from:campus_news library hours");
   await page.goto(`/campus_news/status/${p.id}`);
-  await page.locator(`article[data-post-id="${p.id}"]`).first().getByRole("button", { name: "Share post" }).click();
-  await page.getByRole("menuitem", { name: "Send via Direct Message" }).click();
+  await page.locator(`article[data-post-id="${p.id}"]`).first().getByRole("button", { name: "Send post" }).click();
+  await page.getByRole("menuitem", { name: "Send in Inbox" }).click();
   const dialog = page.getByRole("dialog", { name: "Send Post" });
   await dialog.getByRole("button", { name: /Dr\. Astrid Lindqvist/ }).click();
   await dialog.getByLabel("Add a comment").fill("Look at this");
@@ -98,13 +98,13 @@ test("composer: GIF picker, poll editor rules, and schedule picker", async ({ pa
   await expect(page.getByRole("button", { name: /^Poll/ })).toBeDisabled();
   await page.getByRole("button", { name: "Remove media", exact: true }).click();
   await page.getByRole("button", { name: "Poll" }).click();
-  await page.getByLabel("What’s happening?").fill(`Poll ${rand()}?`);
+  await page.getByLabel("Share something with your campus…").fill(`Poll ${rand()}?`);
   await page.getByLabel(/Choice 1/).fill("Yes");
   await page.getByLabel(/Choice 2/).fill("Yes");
   await expect(page.getByText("Poll choices must be different.")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Post", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Publish", exact: true })).toBeDisabled();
   await page.getByLabel(/Choice 2/).fill("No");
-  await expect(page.getByRole("button", { name: "Post", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Publish", exact: true })).toBeEnabled();
   // Schedule picker validates future times and shows the zone.
   await page.getByRole("button", { name: "Schedule" }).click();
   const dlg = page.getByRole("dialog", { name: "Schedule" });
@@ -136,8 +136,8 @@ test("message reactions, delete-for-me, conversation info rename and snooze", as
   await page.getByLabel("Group name").fill("Bolt crew");
   await page.getByRole("button", { name: "Save" }).click();
   await expect(page.getByText("Bolt crew")).toBeVisible();
-  await page.getByRole("switch", { name: /Snooze notifications/ }).click();
-  await expect(page.getByRole("switch", { name: /Snooze notifications/ })).toHaveAttribute("aria-checked", "true");
+  await page.getByRole("switch", { name: /Snooze alerts/ }).click();
+  await expect(page.getByRole("switch", { name: /Snooze alerts/ })).toHaveAttribute("aria-checked", "true");
   await page.getByRole("button", { name: "Back" }).click();
   await expect(log.getByText(/renamed the group to “Bolt crew”/)).toBeVisible();
   // Delete-for-me.
@@ -203,12 +203,12 @@ test("copy link writes the canonical post URL; native share passes it to the OS 
   const p = await findPost(page, "from:prof_lindqvist orbits");
   await page.goto(`/prof_lindqvist/status/${p.id}`);
   const card = page.locator(`article[data-post-id="${p.id}"]`).first();
-  await card.getByRole("button", { name: "Share post" }).click();
-  await page.getByRole("menuitem", { name: "Copy link to Post" }).click();
+  await card.getByRole("button", { name: "Send post" }).click();
+  await page.getByRole("menuitem", { name: "Copy link" }).click();
   await expect(page.getByText("Copied to clipboard")).toBeVisible();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(`http://localhost:3000/prof_lindqvist/status/${p.id}`);
-  await card.getByRole("button", { name: "Share post" }).click();
-  await page.getByRole("menuitem", { name: "Share Post via…" }).click();
+  await card.getByRole("button", { name: "Send post" }).click();
+  await page.getByRole("menuitem", { name: "Share outside iSchoolie…" }).click();
   const shared = await page.evaluate(() => (window as unknown as { __shared: { url: string }[] }).__shared);
   expect(shared[0].url).toBe(`http://localhost:3000/prof_lindqvist/status/${p.id}`);
 });
@@ -237,9 +237,9 @@ test("video upload captures a poster frame in the browser", async ({ page }) => 
   await openApp(page, "/compose/post");
   await page.locator('input[type="file"]').first().setInputFiles({ name: "orbit.webm", mimeType: "video/webm", buffer: readFileSync("assets/seed/video/orbit.webm") });
   const text = `Video ${rand()}`;
-  await page.getByLabel("What’s happening?").fill(text);
-  await expect(page.getByRole("button", { name: "Post", exact: true })).toBeEnabled({ timeout: 20_000 });
-  await page.getByRole("button", { name: "Post", exact: true }).click();
+  await page.getByLabel("Share something with your campus…").fill(text);
+  await expect(page.getByRole("button", { name: "Publish", exact: true })).toBeEnabled({ timeout: 20_000 });
+  await page.getByRole("button", { name: "Publish", exact: true }).click();
   await expect(page.getByText("Your post was sent.")).toBeVisible();
   await page.goto("/maya_learns/media");
   const video = page.locator("article", { hasText: text }).first().locator("video");
@@ -258,12 +258,12 @@ test("emoji picker: full set with search, categories and recents", async ({ page
   await expect(picker.getByRole("button", { name: /Insert .*pizza/i })).toBeVisible();
   await picker.getByLabel("Search emoji").fill("rocket");
   await picker.getByRole("button", { name: "Insert rocket" }).click();
-  await expect(page.getByLabel("What’s happening?")).toHaveValue("🚀");
+  await expect(page.getByLabel("Share something with your campus…")).toHaveValue("🚀");
   // Emoji count as 2 toward the legacy 280 limit.
-  await page.getByLabel("What’s happening?").fill("🚀".repeat(140));
-  await expect(page.getByRole("button", { name: "Post", exact: true })).toBeEnabled();
-  await page.getByLabel("What’s happening?").fill("🚀".repeat(141));
-  await expect(page.getByRole("button", { name: "Post", exact: true })).toBeDisabled();
+  await page.getByLabel("Share something with your campus…").fill("🚀".repeat(140));
+  await expect(page.getByRole("button", { name: "Publish", exact: true })).toBeEnabled();
+  await page.getByLabel("Share something with your campus…").fill("🚀".repeat(141));
+  await expect(page.getByRole("button", { name: "Publish", exact: true })).toBeDisabled();
   // Recently used shows up first next time.
   await page.getByRole("button", { name: "Emoji" }).click();
   await expect(page.getByRole("dialog", { name: "Emoji picker" }).getByRole("tab", { name: "Recent" })).toHaveAttribute("aria-selected", "true");

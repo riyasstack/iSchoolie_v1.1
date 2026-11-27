@@ -17,7 +17,7 @@ export function MediaGrid({ media, href, sensitive }: { media: MediaDTO[]; href:
       <div className="mt-3 grid aspect-video place-items-center rounded-card border border-line bg-subtle p-6 text-center">
         <div>
           <p className="font-bold">The following media includes potentially sensitive content.</p>
-          <button type="button" className="mt-3 rounded-full border border-line-strong px-4 py-1.5 font-bold hover:bg-hover-strong" onClick={(e) => { e.stopPropagation(); setRevealed(true); }}>
+          <button type="button" className="mt-3 rounded-xl border border-line-strong px-4 py-1.5 font-semibold hover:bg-hover-strong" onClick={(e) => { e.stopPropagation(); setRevealed(true); }}>
             View
           </button>
         </div>
@@ -98,7 +98,7 @@ export function GifPlayer({ media, href }: { media: MediaDTO; href?: string }) {
             setPlaying(true);
           }}
         >
-          <span className="grid h-14 w-14 place-items-center rounded-full border-4 border-white bg-accent text-white">
+          <span className="grid h-14 w-14 place-items-center rounded-xl border-4 border-white bg-accent text-white">
             <Play size={24} fill="currentColor" />
           </span>
         </button>

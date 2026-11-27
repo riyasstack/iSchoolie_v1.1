@@ -45,10 +45,10 @@ export function NotificationsView({ tab }: { tab: "all" | "mentions" }) {
   return (
     <div>
       <PageHeader
-        title="Notifications"
+        title="Alerts"
         topLevel
         right={
-          <Link href="/settings/notifications" aria-label="Notification settings" className="grid h-[34px] w-[34px] place-items-center rounded-full text-accent-text hover:bg-accent-soft">
+          <Link href="/settings/notifications" aria-label="Alert settings" className="grid h-[34px] w-[34px] place-items-center rounded-xl text-accent-text hover:bg-accent-soft">
             <Settings size={20} />
           </Link>
         }
@@ -65,7 +65,7 @@ export function NotificationsView({ tab }: { tab: "all" | "mentions" }) {
       {q.data && items.length === 0 && (
         <EmptyState
           title={tab === "all" ? "Nothing to see here — yet" : "Join the conversation"}
-          body={tab === "all" ? "From likes to reposts and a whole lot more, this is where all the action happens." : "When someone mentions you, you’ll find it here."}
+          body={tab === "all" ? "From cheers to shares and a whole lot more, this is where all the action happens." : "When someone mentions you, you’ll find it here."}
         />
       )}
       {items.map((g) => (

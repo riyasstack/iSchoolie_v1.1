@@ -24,7 +24,7 @@ async function visibleList(ctx: RequestContext, id: string) {
   const l = await loadList(ctx, id);
   const g = await loadViewerGraph(prisma, ctx);
   // Private lists are visible only to their owner; blocked parties can't see each other's lists.
-  if (!l || (l.isPrivate && l.ownerId !== ctx.actor.id) || (l.ownerId !== ctx.actor.id && authorAccess(g, { ...l.owner, isProtected: false }) !== "ok")) throw notFound("That list");
+  if (!l || (l.isPrivate && l.ownerId !== ctx.actor.id) || (l.ownerId !== ctx.actor.id && authorAccess(g, { ...l.owner, isProtected: false }) !== "ok")) throw notFound("That circle");
   return l;
 }
 
@@ -98,8 +98,8 @@ export async function createList(ctx: RequestContext, data: { name: string; desc
 
 async function ownedList(ctx: RequestContext, id: string) {
   const l = await prisma.list.findFirst({ where: { workspaceId: ctx.workspace.id, id } });
-  if (!l || (l.isPrivate && l.ownerId !== ctx.actor.id)) throw notFound("That list");
-  if (l.ownerId !== ctx.actor.id) throw forbidden("Only the list owner can do that.");
+  if (!l || (l.isPrivate && l.ownerId !== ctx.actor.id)) throw notFound("That circle");
+  if (l.ownerId !== ctx.actor.id) throw forbidden("Only the circle owner can do that.");
   return l;
 }
 
@@ -131,7 +131,7 @@ export async function setListMember(ctx: RequestContext, id: string, handle: str
   if (on) {
     const g = await loadViewerGraph(prisma, ctx);
     if (g.blockedBy.has(u.id)) throw forbidden("You can’t add this account to lists.");
-    if (g.blocking.has(u.id)) throw forbidden("Unblock this account to add it to a list.");
+    if (g.blocking.has(u.id)) throw forbidden("Unblock this account to add it to a circle.");
     if (u.suspended) throw forbidden("This account is suspended.");
     const count = await prisma.listMember.count({ where: { listId: id } });
     if (count >= 500) throw invalid("Lists can have up to 500 members in the demo.");
@@ -144,7 +144,7 @@ export async function setListMember(ctx: RequestContext, id: string, handle: str
 
 export async function setListSubscription(ctx: RequestContext, id: string, on: boolean) {
   const l = await visibleList(ctx, id);
-  if (l.ownerId === ctx.actor.id) throw invalid("You own this list.");
+  if (l.ownerId === ctx.actor.id) throw invalid("You own this circle.");
   if (on) await prisma.listSubscription.createMany({ data: [{ workspaceId: ctx.workspace.id, listId: id, userId: ctx.actor.id }], skipDuplicates: true });
   else {
     await prisma.listSubscription.deleteMany({ where: { listId: id, userId: ctx.actor.id } });
@@ -218,7 +218,7 @@ export async function getTopic(ctx: RequestContext, slug: string): Promise<Topic
     where: { workspaceId_slug: { workspaceId: ctx.workspace.id, slug } },
     include: { _count: { select: { follows: true } }, follows: { where: { userId: ctx.actor.id }, select: { userId: true } } },
   });
-  if (!t) throw notFound("That topic");
+  if (!t) throw notFound("That interest");
   return { id: t.id, slug: t.slug, name: t.name, category: t.category, description: t.description, following: t.follows.length > 0, followerCount: t._count.follows };
 }
 
@@ -266,8 +266,8 @@ export async function getMoment(ctx: RequestContext, id: string) {
   const ws = ctx.workspace.id;
   const g = await loadViewerGraph(prisma, ctx);
   const m = await prisma.moment.findFirst({ where: { workspaceId: ws, id }, include: { ...momentInclude, items: { orderBy: { position: "asc" }, select: { postId: true } } } });
-  if (!m || (!m.publishedAt && m.ownerId !== ctx.actor.id)) throw notFound("That Moment");
-  if (m.ownerId !== ctx.actor.id && authorAccess(g, { ...m.owner, isProtected: false }) !== "ok") throw notFound("That Moment");
+  if (!m || (!m.publishedAt && m.ownerId !== ctx.actor.id)) throw notFound("That story");
+  if (m.ownerId !== ctx.actor.id && authorAccess(g, { ...m.owner, isProtected: false }) !== "ok") throw notFound("That story");
   // Visibility is re-checked for every post at render time: curation never exposes protected content.
   const map = await serializePosts(prisma, ctx, g, m.items.map((i) => i.postId));
   const posts = m.items.map((i) => map.get(i.postId)!).filter(Boolean);
@@ -304,8 +304,8 @@ export async function createMoment(ctx: RequestContext, data: { title: string; d
 
 async function ownedMoment(ctx: RequestContext, id: string) {
   const m = await prisma.moment.findFirst({ where: { workspaceId: ctx.workspace.id, id } });
-  if (!m || (!m.publishedAt && m.ownerId !== ctx.actor.id)) throw notFound("That Moment");
-  if (m.ownerId !== ctx.actor.id) throw forbidden("Only the creator can edit this Moment.");
+  if (!m || (!m.publishedAt && m.ownerId !== ctx.actor.id)) throw notFound("That story");
+  if (m.ownerId !== ctx.actor.id) throw forbidden("Only the creator can edit this story.");
   return m;
 }
 

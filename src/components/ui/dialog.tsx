@@ -134,19 +134,19 @@ export function ConfirmDialog({
               disabled={busy}
               onClick={onConfirm}
               className={clsx(
-                "min-h-[44px] rounded-full font-bold disabled:opacity-50",
+                "min-h-[44px] rounded-xl font-semibold disabled:opacity-50",
                 danger ? "bg-danger text-white hover:bg-danger-hover" : "bg-accent text-accent-on hover:bg-accent-hover",
               )}
             >
               {busy ? "Working…" : confirmLabel}
             </button>
             {secondary && (
-              <button type="button" onClick={secondary.onClick} className="min-h-[44px] rounded-full border border-line-strong font-bold hover:bg-hover-strong">
+              <button type="button" onClick={secondary.onClick} className="min-h-[44px] rounded-xl border border-line-strong font-semibold hover:bg-hover-strong">
                 {secondary.label}
               </button>
             )}
             <R.Close asChild>
-              <button type="button" className="min-h-[44px] rounded-full border border-line-strong font-bold hover:bg-hover-strong">
+              <button type="button" className="min-h-[44px] rounded-xl border border-line-strong font-semibold hover:bg-hover-strong">
                 {cancelLabel}
               </button>
             </R.Close>

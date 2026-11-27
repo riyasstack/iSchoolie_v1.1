@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Sparkles, ArrowUp } from "lucide-react";
+import { ArrowUp } from "lucide-react";
 import { PageHeader } from "@/components/layout/app-shell";
 import { Menu, MenuItem, EmptyState } from "@/components/ui/misc";
 import { Avatar } from "@/components/ui/misc";
@@ -29,7 +29,7 @@ export function HomeView() {
       qc.setQueryData<SessionDTO>(["session"], (old) => (old ? { ...old, preferences: p } : old));
       applyPreferences(p);
       window.scrollTo({ top: 0 });
-      toast({ text: m === "latest" ? "You’ll see the latest posts first." : "You’ll see top posts first." });
+      toast({ text: m === "latest" ? "Showing the newest posts first." : "Showing posts picked for you." });
     } catch (e) {
       qc.invalidateQueries({ queryKey: ["session"] });
       toast({ text: errorMessage(e), tone: "error" });
@@ -39,32 +39,23 @@ export function HomeView() {
   return (
     <div>
       <PageHeader
-        title={mode === "latest" ? "Latest Posts" : "Home"}
+        title="Feed"
         topLevel
         right={
-          <Menu
-            label="Timeline options"
-            trigger={
-              <button type="button" aria-label="Top Posts / Latest Posts" title="Timeline options" className="grid h-[34px] w-[34px] place-items-center rounded-full text-accent-text hover:bg-accent-soft">
-                <Sparkles size={20} />
+          <div role="group" aria-label="Feed order" className="flex rounded-xl bg-subtle p-1 text-sm font-semibold">
+            {([["home", "For you", "Ranked by people and interests you follow, recency and engagement"], ["latest", "Latest", "Newest first, nothing ranked"]] as const).map(([m, label, hint]) => (
+              <button
+                key={m}
+                type="button"
+                aria-pressed={mode === m}
+                title={hint}
+                onClick={() => mode !== m && setMode(m)}
+                className={mode === m ? "rounded-lg bg-bg px-3 py-1 text-accent-text shadow-sm" : "rounded-lg px-3 py-1 text-fg2 hover:text-fg"}
+              >
+                {label}
               </button>
-            }
-          >
-            {mode === "home" ? (
-              <MenuItem icon={<Sparkles />} onSelect={() => setMode("latest")}>
-                <span className="block font-bold">See latest Posts instead</span>
-                <span className="block text-sm text-fg2">You’ll be switched back Home after you’ve been away for a while.</span>
-              </MenuItem>
-            ) : (
-              <MenuItem icon={<Sparkles />} onSelect={() => setMode("home")}>
-                <span className="block font-bold">Go back Home</span>
-                <span className="block text-sm text-fg2">You’ll see top Posts first.</span>
-              </MenuItem>
-            )}
-            <div className="border-t border-line px-4 py-2 text-xs text-fg2">
-              Home ranks recent posts from people and topics you follow by recency and engagement. Latest is strictly newest first. <Link href="/help#timeline" className="text-accent-text">How it works</Link>
-            </div>
-          </Menu>
+            ))}
+          </div>
         }
       />
       <DemoNotice />
@@ -78,7 +69,7 @@ export function HomeView() {
         empty={
           <EmptyState
             title="Welcome to iSchoolie!"
-            body="This is the best place to see what’s happening. Follow some people and topics to fill your timeline."
+            body="Your Feed fills up as you follow classmates, clubs and interests."
             action={
               <Link href="/i/connect">
                 <Button size="lg">Let’s go!</Button>

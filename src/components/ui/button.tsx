@@ -18,7 +18,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       ref={ref}
       type={type}
       className={clsx(
-        "inline-flex select-none items-center justify-center gap-1 rounded-full font-bold whitespace-nowrap transition-colors duration-150 disabled:opacity-50",
+        "inline-flex select-none items-center justify-center gap-1.5 rounded-xl font-semibold whitespace-nowrap transition-colors duration-150 disabled:opacity-50",
         size === "sm" && "min-h-[30px] px-[15px] text-sm",
         size === "md" && "min-h-[36px] px-4 text-post",
         size === "lg" && "min-h-[49px] px-8 text-post",
@@ -48,7 +48,7 @@ export const IconButton = forwardRef<
       aria-label={label}
       title={rest.title ?? label}
       className={clsx(
-        "inline-flex shrink-0 items-center justify-center rounded-full transition-colors duration-150 disabled:opacity-50",
+        "inline-flex shrink-0 items-center justify-center rounded-xl transition-colors duration-150 disabled:opacity-50",
         tone === "accent" && "text-accent-text enabled:hover:bg-accent-soft",
         tone === "neutral" && "text-fg enabled:hover:bg-hover-strong",
         tone === "like" && "enabled:hover:bg-like-soft enabled:hover:text-like",

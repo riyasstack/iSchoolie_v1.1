@@ -155,13 +155,13 @@ function ListMembershipDialog({ handle, onClose }: { handle: string; onClose: ()
     }
   };
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()} title="Pick a List" fullScreenMobile headerAction={<Button size="sm" variant="inverse" onClick={onClose} className="mr-2">Done</Button>}>
+    <Dialog open onOpenChange={(o) => !o && onClose()} title="Pick a Circle" fullScreenMobile headerAction={<Button size="sm" variant="inverse" onClick={onClose} className="mr-2">Done</Button>}>
       <Link href="/i/lists/create" onClick={onClose} className="block border-b border-line px-4 py-4 text-accent-text hover:bg-hover">
         Create a new List
       </Link>
       {q.isPending && <UserSkeleton count={3} />}
       {q.isError && <ErrorState message={errorMessage(q.error)} onRetry={() => q.refetch()} />}
-      {q.data?.length === 0 && <p className="px-4 py-6 text-fg2">You haven’t created any Lists yet.</p>}
+      {q.data?.length === 0 && <p className="px-4 py-6 text-fg2">You haven’t created any Circles yet.</p>}
       {q.data?.map(({ list, isMember }) => (
         <button key={list.id} type="button" disabled={pending[list.id]} aria-pressed={isMember} onClick={() => toggle(list.id, !isMember)} className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-hover disabled:opacity-60">
           <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-subtle">
@@ -210,7 +210,7 @@ function ShareByMessageDialog({ postId, onClose }: { postId: string; onClose: ()
         {selected.length > 0 && (
           <div className="flex flex-wrap gap-2 pb-2">
             {selected.map((u) => (
-              <button key={u.id} type="button" onClick={() => setSelected((s) => s.filter((x) => x.id !== u.id))} className="flex items-center gap-1 rounded-full border border-line-strong py-0.5 pl-0.5 pr-3 font-bold hover:bg-hover-strong">
+              <button key={u.id} type="button" onClick={() => setSelected((s) => s.filter((x) => x.id !== u.id))} className="flex items-center gap-1 rounded-xl border border-line-strong py-0.5 pl-0.5 pr-3 font-semibold hover:bg-hover-strong">
                 <Avatar user={u} size={22} /> {u.displayName} ×
               </button>
             ))}
@@ -284,11 +284,11 @@ function ActivityDialog({ postId, onClose }: { postId: string; onClose: () => vo
           </p>
           <dl className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-card border border-line bg-line sm:grid-cols-3">
             {[
-              ["Likes", d.likes],
-              ["Reposts", d.reposts],
-              ["Quote Posts", d.quotes],
+              ["Cheers", d.likes],
+              ["Shares", d.reposts],
+              ["Quote shares", d.quotes],
               ["Replies", d.replies],
-              ["Bookmarks", d.bookmarks],
+              ["Saved", d.bookmarks],
               ["Detail opens", d.detailOpens],
             ].map(([k, v]) => (
               <div key={k} className="bg-bg p-4">
@@ -297,7 +297,7 @@ function ActivityDialog({ postId, onClose }: { postId: string; onClose: () => vo
               </div>
             ))}
           </dl>
-          <h3 className="mt-6 font-bold">Likes and reposts, last 7 days</h3>
+          <h3 className="mt-6 font-bold">Cheers and shares, last 7 days</h3>
           <div className="mt-3 flex h-28 items-end gap-2" role="img" aria-label={d.last7Days.map((x) => `${x.day}: ${x.engagements}`).join(", ")}>
             {d.last7Days.map((x) => (
               <div key={x.day} className="flex flex-1 flex-col items-center gap-1">

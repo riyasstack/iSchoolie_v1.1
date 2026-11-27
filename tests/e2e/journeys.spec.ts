@@ -6,13 +6,13 @@ test("1. opens without login; publish a post; it survives reload in Home, profil
   await openApp(page, "/");
   await expect(page).toHaveURL(/\/home$/);
   const text = `E2E hello ${rand()} #e2e`;
-  const box = page.getByLabel("What’s happening?");
+  const box = page.getByLabel("Share something with your campus…");
   await box.click();
   await box.fill(text);
-  await page.getByRole("button", { name: "Post", exact: true }).click();
+  await page.getByRole("button", { name: "Publish", exact: true }).click();
   await expect(page.getByText("Your post was sent.")).toBeVisible();
   await page.reload();
-  await page.getByRole("button", { name: /Top Posts \/ Latest Posts/ }).waitFor();
+  await page.getByRole("button", { name: "For you" }).waitFor();
   await expect(page.locator("article", { hasText: text })).toBeVisible();
   await page.goto("/maya_learns");
   const card = page.locator("article", { hasText: text }).first();
@@ -28,18 +28,18 @@ test("2. like, repost, bookmark and quote stay in sync across screens", async ({
   const target = posts.posts[0];
   await page.goto(`/prof_lindqvist/status/${target.id}`);
   const focal = page.locator(`article[data-post-id="${target.id}"]`).first();
-  await focal.getByRole("button", { name: /^Like/ }).click();
-  await expect(focal.getByRole("button", { name: /^Unlike/ })).toBeVisible();
-  await focal.getByRole("button", { name: /^Share post/ }).click();
-  await page.getByRole("menuitem", { name: "Add Post to Bookmarks" }).click();
-  await expect(page.getByText("Post added to your Bookmarks")).toBeVisible();
-  await focal.getByRole("button", { name: /^Repost/ }).click();
-  await page.getByRole("menuitem", { name: "Repost" }).click();
-  await expect(focal.getByRole("button", { name: /^Undo repost/ })).toBeVisible();
-  // Bookmarks screen shows the same state.
+  await focal.getByRole("button", { name: /^Cheer/ }).click();
+  await expect(focal.getByRole("button", { name: /^Remove cheer/ })).toBeVisible();
+  await focal.getByRole("button", { name: /^Send post/ }).click();
+  await page.getByRole("menuitem", { name: "Save post" }).click();
+  await expect(page.getByText("Saved to your library")).toBeVisible();
+  await focal.getByRole("button", { name: /^Share/ }).click();
+  await page.getByRole("menuitem", { name: "Share to your followers" }).click();
+  await expect(focal.getByRole("button", { name: /^Undo share/ })).toBeVisible();
+  // Saved screen shows the same state.
   await page.goto("/i/bookmarks");
   const bm = page.locator(`article[data-post-id="${target.id}"]`).first();
-  await expect(bm.getByRole("button", { name: /^Unlike/ })).toBeVisible();
+  await expect(bm.getByRole("button", { name: /^Remove cheer/ })).toBeVisible();
   // Server agrees after reload.
   const fresh = await api<PostDTO>(page.request, "GET", `/posts/${target.id}`);
   expect(fresh.viewer.liked && fresh.viewer.reposted && fresh.viewer.bookmarked).toBe(true);
@@ -47,7 +47,7 @@ test("2. like, repost, bookmark and quote stay in sync across screens", async ({
   await page.goto(`/compose/post?quote=${target.id}`);
   const quote = `Quoting ${rand()}`;
   await page.getByLabel("Add a comment").fill(quote);
-  await page.getByRole("button", { name: "Post", exact: true }).click();
+  await page.getByRole("button", { name: "Publish", exact: true }).click();
   await expect(page.getByText("Your post was sent.")).toBeVisible();
   const after = await api<PostDTO>(page.request, "GET", `/posts/${target.id}`);
   expect(after.counts.quotes).toBe(fresh.counts.quotes + 1);
@@ -106,8 +106,8 @@ test("6. upload an image with alt text and open it in the viewer", async ({ page
   await page.getByRole("button", { name: "Save" }).click();
   await expect(page.getByRole("button", { name: /Edit image description: A small blue square/ })).toBeVisible();
   const text = `Photo ${rand()}`;
-  await page.getByLabel("What’s happening?").fill(text);
-  await page.getByRole("button", { name: "Post", exact: true }).click();
+  await page.getByLabel("Share something with your campus…").fill(text);
+  await page.getByRole("button", { name: "Publish", exact: true }).click();
   await expect(page.getByText("Your post was sent.")).toBeVisible();
   await page.goto("/maya_learns/media");
   const card = page.locator("article", { hasText: text }).first();
@@ -122,12 +122,12 @@ test("7. drafts persist on the server; scheduled posts are published by the work
   test.setTimeout(150_000);
   await openApp(page, "/compose/post");
   const draft = `Draft ${rand()}`;
-  await page.getByLabel("What’s happening?").fill(draft);
+  await page.getByLabel("Share something with your campus…").fill(draft);
   await page.waitForResponse((r) => r.url().includes("/api/drafts") && r.request().method() !== "GET");
   await page.goto("/compose/drafts");
   await expect(page.getByText(draft)).toBeVisible();
   await page.getByText(draft).click();
-  await expect(page.getByLabel("What’s happening?")).toHaveValue(draft);
+  await expect(page.getByLabel("Share something with your campus…")).toHaveValue(draft);
   // Schedule via the API ~65s ahead, then wait for the worker (browser not needed).
   const text = `Scheduled ${rand()}`;
   const when = new Date(Date.now() + 65_000).toISOString();
@@ -153,12 +153,12 @@ test("8. lists: create, add members, timeline, and private-list restriction", as
   // A different actor in the same workspace cannot see the private list.
   await switchActor(page, "stargazer_sam");
   await page.goto(listUrl);
-  await expect(page.getByText("This List doesn’t exist")).toBeVisible();
+  await expect(page.getByText("This Circle doesn’t exist")).toBeVisible();
   // Another visitor's workspace can't see it either.
   const other = await browser.newContext();
   const p2 = await other.newPage();
   await p2.goto(listUrl);
-  await expect(p2.getByText("This List doesn’t exist")).toBeVisible();
+  await expect(p2.getByText("This Circle doesn’t exist")).toBeVisible();
   await other.close();
 });
 
@@ -213,7 +213,7 @@ test("11. profile edit and preferences persist and take effect", async ({ page }
   await expect(page).toHaveURL(/\/maya_learns$/);
   await expect(page.getByText(bio)).toBeVisible();
   await page.goto("/settings/display");
-  await page.getByRole("radio", { name: "Dim" }).click();
+  await page.getByRole("radio", { name: "Dusk" }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "DIM");
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "DIM");
@@ -260,18 +260,18 @@ test("14. a failed mutation rolls back; offline shows a recoverable error", asyn
   await openApp(page, "/home");
   await page.route("**/api/posts/*/like", (r) => r.abort());
   const first = page.locator("article").first();
-  const likeBtn = first.getByRole("button", { name: /^Like/ });
+  const likeBtn = first.getByRole("button", { name: /^Cheer/ });
   if (await likeBtn.count()) {
     await likeBtn.click();
     await expect(page.getByText(/offline|connection/i)).toBeVisible();
-    await expect(first.getByRole("button", { name: /^Like/ })).toBeVisible();
+    await expect(first.getByRole("button", { name: /^Cheer/ })).toBeVisible();
   }
   await page.unroute("**/api/posts/*/like");
   await context.setOffline(true);
-  await page.getByLabel("What’s happening?").fill("offline attempt");
-  await page.getByRole("button", { name: "Post", exact: true }).click();
+  await page.getByLabel("Share something with your campus…").fill("offline attempt");
+  await page.getByRole("button", { name: "Publish", exact: true }).click();
   await expect(page.getByRole("alert").filter({ hasText: /offline/i })).toBeVisible();
-  await expect(page.getByLabel("What’s happening?")).toHaveValue("offline attempt");
+  await expect(page.getByLabel("Share something with your campus…")).toHaveValue("offline attempt");
   await context.setOffline(false);
 });
 
@@ -289,7 +289,7 @@ test("17. keyboard: skip link, j/k navigation, shortcuts dialog focus", async ({
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog", { name: "Keyboard shortcuts" })).toBeHidden();
   // Shortcuts don't fire while typing.
-  await page.getByLabel("What’s happening?").click();
+  await page.getByLabel("Share something with your campus…").click();
   await page.keyboard.type("j k n");
-  await expect(page.getByLabel("What’s happening?")).toHaveValue("j k n");
+  await expect(page.getByLabel("Share something with your campus…")).toHaveValue("j k n");
 });

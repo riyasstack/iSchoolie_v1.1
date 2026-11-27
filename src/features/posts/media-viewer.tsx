@@ -50,10 +50,10 @@ export function MediaViewer({ id, n, kind, asModal }: { id: string; n: number; k
         <R.Content aria-describedby={undefined} className="fixed inset-0 z-[90] flex flex-col outline-none">
           <R.Title className="sr-only">{media?.alt ? `Image: ${media.alt}` : "Media viewer"}</R.Title>
           <div className="flex items-center justify-between p-3">
-            <R.Close aria-label="Close" className="grid h-10 w-10 place-items-center rounded-full bg-black/40 text-white hover:bg-white/20">
+            <R.Close aria-label="Close" className="grid h-10 w-10 place-items-center rounded-xl bg-black/40 text-white hover:bg-white/20">
               <X size={22} />
             </R.Close>
-            {count > 1 && <span className="rounded-full bg-black/40 px-3 py-1 text-sm text-white">{index + 1} / {count}</span>}
+            {count > 1 && <span className="rounded-xl bg-black/40 px-3 py-1 text-sm text-white">{index + 1} / {count}</span>}
           </div>
           <div className="relative flex min-h-0 flex-1 items-center justify-center px-2" onClick={(e) => e.target === e.currentTarget && close()}>
             {isPending && <Spinner />}
@@ -66,12 +66,12 @@ export function MediaViewer({ id, n, kind, asModal }: { id: string; n: number; k
               <img src={media.url} alt={media.alt} className="max-h-full max-w-full select-none object-contain" draggable={false} />
             ))}
             {index > 0 && (
-              <button type="button" aria-label="Previous image" onClick={() => go(-1)} className="absolute left-3 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-black/50 text-white hover:bg-black/70">
+              <button type="button" aria-label="Previous image" onClick={() => go(-1)} className="absolute left-3 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-xl bg-black/50 text-white hover:bg-black/70">
                 <ChevronLeft size={24} />
               </button>
             )}
             {index < count - 1 && (
-              <button type="button" aria-label="Next image" onClick={() => go(1)} className="absolute right-3 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-black/50 text-white hover:bg-black/70">
+              <button type="button" aria-label="Next image" onClick={() => go(1)} className="absolute right-3 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-xl bg-black/50 text-white hover:bg-black/70">
                 <ChevronRight size={24} />
               </button>
             )}

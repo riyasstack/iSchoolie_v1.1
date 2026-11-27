@@ -92,18 +92,18 @@ function Inbox() {
   return (
     <div>
       <PageHeader
-        title="Messages"
+        title="Inbox"
         topLevel
         right={
           <div className="flex">
-            <Link href="/settings/privacy_and_safety#messages" aria-label="Message settings" className="grid h-[34px] w-[34px] place-items-center rounded-full text-accent-text hover:bg-accent-soft"><Settings size={20} /></Link>
-            <Link href="/messages/compose" aria-label="New message" className="grid h-[34px] w-[34px] place-items-center rounded-full text-accent-text hover:bg-accent-soft"><MailPlus size={20} /></Link>
+            <Link href="/settings/privacy_and_safety#messages" aria-label="Message settings" className="grid h-[34px] w-[34px] place-items-center rounded-xl text-accent-text hover:bg-accent-soft"><Settings size={20} /></Link>
+            <Link href="/messages/compose" aria-label="New message" className="grid h-[34px] w-[34px] place-items-center rounded-xl text-accent-text hover:bg-accent-soft"><MailPlus size={20} /></Link>
           </div>
         }
       />
       {!!requests.data?.length && (
         <Link href="/messages/requests" className="flex items-center gap-3 border-b border-line px-4 py-3 hover:bg-hover">
-          <span className="grid h-12 w-12 place-items-center rounded-full border border-line-strong text-accent-text"><MailPlus size={22} /></span>
+          <span className="grid h-12 w-12 place-items-center rounded-xl border border-line-strong text-accent-text"><MailPlus size={22} /></span>
           <span className="min-w-0 flex-1">
             <span className="block font-bold">Message requests</span>
             <span className="block text-sm text-fg2">{requests.data.length} pending request{requests.data.length === 1 ? "" : "s"}</span>
@@ -112,7 +112,7 @@ function Inbox() {
       )}
       {q.isPending && <UserSkeleton count={5} />}
       {q.isError && <ErrorState message={errorMessage(q.error)} onRetry={() => q.refetch()} />}
-      {q.data?.length === 0 && <EmptyState title="Send a message, get a message" body="Direct Messages are private conversations between you and other people on iSchoolie." action={<Link href="/messages/compose"><Button size="lg">Start a conversation</Button></Link>} />}
+      {q.data?.length === 0 && <EmptyState title="Send a message, get a message" body="Your Inbox holds private conversations between you and other people on iSchoolie." action={<Link href="/messages/compose"><Button size="lg">Start a conversation</Button></Link>} />}
       <ul>
         {q.data?.map((c) => <ConversationRow key={c.id} c={c} meId={s.actor.id} active={pathname.startsWith(`/messages/${c.id}`)} />)}
       </ul>
@@ -356,7 +356,7 @@ export function ConversationView({ id }: { id: string }) {
           </span>
         ) : "…"}
         subtitle={c?.kind === "DIRECT" && others[0] ? `@${others[0].handle}` : c ? `${others.length + 1} people` : undefined}
-        right={c && <Link href={`/messages/${id}/info`} aria-label="Conversation info" className="grid h-[34px] w-[34px] place-items-center rounded-full text-accent-text hover:bg-accent-soft"><Info size={20} /></Link>}
+        right={c && <Link href={`/messages/${id}/info`} aria-label="Conversation info" className="grid h-[34px] w-[34px] place-items-center rounded-xl text-accent-text hover:bg-accent-soft"><Info size={20} /></Link>}
       />
       <div
         ref={scroller}
@@ -366,7 +366,7 @@ export function ConversationView({ id }: { id: string }) {
         }}
         className="min-h-0 flex-1 overflow-y-auto px-4 py-2"
         role="log"
-        aria-label="Messages"
+        aria-label="Inbox"
         aria-live="polite"
       >
         {loading && <Spinner className="py-8" />}
@@ -472,7 +472,7 @@ function MessageBubble({ m, mine, group, showDate, onHidden, onReplace, onReport
             {counts.length > 0 && (
               <div className="mt-0.5 flex gap-1">
                 {counts.map(([e, n]) => (
-                  <button key={e} type="button" onClick={() => react(myReaction === e ? null : e)} aria-label={`${e} reaction, ${n}${myReaction === e ? ", yours — click to remove" : ""}`} className={clsx("rounded-full border px-1.5 text-sm", myReaction === e ? "border-accent bg-accent-soft" : "border-line-strong")}>
+                  <button key={e} type="button" onClick={() => react(myReaction === e ? null : e)} aria-label={`${e} reaction, ${n}${myReaction === e ? ", yours — click to remove" : ""}`} className={clsx("rounded-xl border px-1.5 text-sm", myReaction === e ? "border-accent bg-accent-soft" : "border-line-strong")}>
                     {e} {n > 1 && n}
                   </button>
                 ))}
@@ -481,16 +481,16 @@ function MessageBubble({ m, mine, group, showDate, onHidden, onReplace, onReport
             <span className="mt-0.5 text-xs text-fg2" title={new Date(m.createdAt).toLocaleString()}>{relativeTime(m.createdAt)}</span>
           </div>
           <div className={clsx("items-center gap-1 self-center sm:flex sm:opacity-0 sm:group-focus-within:opacity-100 sm:group-hover:opacity-100", showActions ? "flex" : "hidden")}>
-            <Menu label="React" align="center" trigger={<button type="button" aria-label="React to message" className="grid h-8 w-8 place-items-center rounded-full text-fg2 hover:bg-accent-soft hover:text-accent-text"><Smile size={18} /></button>}>
+            <Menu label="React" align="center" trigger={<button type="button" aria-label="React to message" className="grid h-8 w-8 place-items-center rounded-xl text-fg2 hover:bg-accent-soft hover:text-accent-text"><Smile size={18} /></button>}>
               <div className="flex gap-1 px-2 py-1" role="group" aria-label="Reactions">
                 {REACTIONS.map((e) => (
-                  <button key={e} type="button" onClick={() => react(myReaction === e ? null : e)} aria-label={`React with ${e}`} aria-pressed={myReaction === e} className={clsx("grid h-9 w-9 place-items-center rounded-full text-xl hover:bg-hover-strong", myReaction === e && "bg-accent-soft")}>
+                  <button key={e} type="button" onClick={() => react(myReaction === e ? null : e)} aria-label={`React with ${e}`} aria-pressed={myReaction === e} className={clsx("grid h-9 w-9 place-items-center rounded-xl text-xl hover:bg-hover-strong", myReaction === e && "bg-accent-soft")}>
                     {e}
                   </button>
                 ))}
               </div>
             </Menu>
-            <Menu label="More" trigger={<button type="button" aria-label="More message actions" className="grid h-8 w-8 place-items-center rounded-full text-fg2 hover:bg-accent-soft hover:text-accent-text"><MoreHorizontal size={18} /></button>}>
+            <Menu label="More" trigger={<button type="button" aria-label="More message actions" className="grid h-8 w-8 place-items-center rounded-xl text-fg2 hover:bg-accent-soft hover:text-accent-text"><MoreHorizontal size={18} /></button>}>
               {m.text && <MenuItem icon={<Copy />} onSelect={() => navigator.clipboard.writeText(m.text).then(() => toast({ text: "Copied to clipboard" }), () => toast({ text: "Couldn’t copy.", tone: "error" }))}>Copy message text</MenuItem>}
               <MenuItem icon={<Trash2 />} danger onSelect={() => setConfirm(true)}>Delete for you</MenuItem>
               {!mine && <MenuItem icon={<Flag />} onSelect={onReport}>Report message</MenuItem>}
@@ -558,7 +558,7 @@ function MessageComposer({ conversationId, initialDraft, onSend }: { conversatio
           ) : (
             <div className="grid h-24 place-items-center text-sm text-fg2">Uploading {Math.round((uploading?.progress ?? 0) * 100)}%</div>
           )}
-          <button type="button" aria-label="Remove attachment" onClick={() => { uploading?.abort(); setUploading(null); setMedia(null); }} className="absolute right-1 top-1 grid h-7 w-7 place-items-center rounded-full bg-black/70 text-white"><X size={14} /></button>
+          <button type="button" aria-label="Remove attachment" onClick={() => { uploading?.abort(); setUploading(null); setMedia(null); }} className="absolute right-1 top-1 grid h-7 w-7 place-items-center rounded-xl bg-black/70 text-white"><X size={14} /></button>
         </div>
       )}
       <div className="flex items-end gap-1">
@@ -586,8 +586,8 @@ function MessageComposer({ conversationId, initialDraft, onSend }: { conversatio
             promise.then((m) => setMedia(m)).catch((err: ApiError) => err.code !== "ABORTED" && setError(err.message)).finally(() => setUploading(null));
           }}
         />
-        <button type="button" aria-label="Add photo or video" disabled={!!media || !!uploading} onClick={() => file.current?.click()} className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-accent-text hover:bg-accent-soft disabled:opacity-40"><ImageIcon size={20} /></button>
-        <button type="button" aria-label="Add a GIF" disabled={!!media || !!uploading} onClick={() => setGif(true)} className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-accent-text hover:bg-accent-soft disabled:opacity-40"><span className="rounded border-2 border-current px-0.5 text-[0.625rem] font-extrabold leading-none">GIF</span></button>
+        <button type="button" aria-label="Add photo or video" disabled={!!media || !!uploading} onClick={() => file.current?.click()} className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-accent-text hover:bg-accent-soft disabled:opacity-40"><ImageIcon size={20} /></button>
+        <button type="button" aria-label="Add a GIF" disabled={!!media || !!uploading} onClick={() => setGif(true)} className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-accent-text hover:bg-accent-soft disabled:opacity-40"><span className="rounded border-2 border-current px-0.5 text-[0.625rem] font-extrabold leading-none">GIF</span></button>
         <div className="flex min-w-0 flex-1 items-end rounded-3xl border border-line-strong px-3 focus-within:border-accent-text">
           <label htmlFor="dm-input" className="sr-only">Start a new message</label>
           <textarea
@@ -605,9 +605,9 @@ function MessageComposer({ conversationId, initialDraft, onSend }: { conversatio
             placeholder="Start a new message"
             className="min-w-0 flex-1 resize-none bg-transparent py-2 outline-none"
           />
-          <EmojiPicker onPick={(em) => setText((t) => t + em)} trigger={<button type="button" aria-label="Emoji" className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-accent-text hover:bg-accent-soft"><Smile size={20} /></button>} />
+          <EmojiPicker onPick={(em) => setText((t) => t + em)} trigger={<button type="button" aria-label="Emoji" className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-accent-text hover:bg-accent-soft"><Smile size={20} /></button>} />
         </div>
-        <button type="button" aria-label="Send" disabled={!canSend} onClick={submit} className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-accent-text hover:bg-accent-soft disabled:opacity-40"><SendHorizontal size={20} /></button>
+        <button type="button" aria-label="Send" disabled={!canSend} onClick={submit} className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-accent-text hover:bg-accent-soft disabled:opacity-40"><SendHorizontal size={20} /></button>
       </div>
       <GifPicker
         open={gif}
@@ -677,7 +677,7 @@ export function ConversationInfo({ id }: { id: string }) {
         <div className="border-b border-line px-4 py-4">
           {name === null ? (
             <div className="flex items-center gap-3">
-              <span className="grid h-12 w-12 place-items-center rounded-full bg-subtle text-fg2"><Users size={22} /></span>
+              <span className="grid h-12 w-12 place-items-center rounded-xl bg-subtle text-fg2"><Users size={22} /></span>
               <span className="min-w-0 flex-1 font-bold break-anywhere">{c.name ?? "Unnamed group"}</span>
               <Button size="sm" variant="outline" onClick={() => setName(c.name ?? "")}><Pencil size={14} /> Edit</Button>
             </div>
@@ -691,7 +691,7 @@ export function ConversationInfo({ id }: { id: string }) {
           )}
         </div>
       )}
-      <Toggle label="Snooze notifications" description="Hide this conversation’s unread badge." checked={c.muted} onChange={(v) => update.mutate({ muted: v })} icon={c.muted ? <BellOff size={18} /> : <Bell size={18} />} />
+      <Toggle label="Snooze alerts" description="Hide this conversation’s unread badge." checked={c.muted} onChange={(v) => update.mutate({ muted: v })} icon={c.muted ? <BellOff size={18} /> : <Bell size={18} />} />
       <h2 className="border-t border-line px-4 pb-2 pt-4 text-heading font-extrabold">People</h2>
       <ul>
         {c.participants.filter((p) => p.active).map((p) => (
@@ -713,7 +713,7 @@ export function ConversationInfo({ id }: { id: string }) {
             <button type="button" onClick={() => setAdding(true)} className="flex items-center gap-2 py-2 text-accent-text hover:underline"><UserPlus size={18} /> Add people</button>
           ) : (
             <div>
-              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search people" aria-label="Search people to add" className="h-10 w-full rounded-full bg-input px-4 outline-none" autoFocus />
+              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search people" aria-label="Search people to add" className="h-10 w-full rounded-xl bg-input px-4 outline-none" autoFocus />
               {results.data?.filter((r) => !c.participants.some((p) => p.id === r.user.id && p.active)).map((r) => (
                 <div key={r.user.id} className="flex items-center gap-3 py-2">
                   <Avatar user={r.user} size={32} />
@@ -815,7 +815,7 @@ export function NewMessage() {
         {selected.length > 0 && (
           <div className="flex flex-wrap gap-2 pb-2">
             {selected.map((u) => (
-              <button key={u.id} type="button" onClick={() => setSelected((s) => s.filter((x) => x.id !== u.id))} aria-label={`Remove ${u.displayName}`} className="flex items-center gap-1 rounded-full border border-line-strong py-0.5 pl-0.5 pr-3 font-bold hover:bg-hover-strong">
+              <button key={u.id} type="button" onClick={() => setSelected((s) => s.filter((x) => x.id !== u.id))} aria-label={`Remove ${u.displayName}`} className="flex items-center gap-1 rounded-xl border border-line-strong py-0.5 pl-0.5 pr-3 font-semibold hover:bg-hover-strong">
                 <Avatar user={u} size={22} /> {u.displayName} <X size={14} />
               </button>
             ))}

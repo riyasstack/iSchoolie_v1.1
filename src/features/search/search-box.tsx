@@ -49,7 +49,7 @@ export function SearchBox({ initial = "", autoFocus }: { initial?: string; autoF
   if (debounced) {
     options.push({ key: "q", href: `/search?q=${encodeURIComponent(debounced)}`, render: <span>Search for “{debounced}”</span> });
     for (const h of ta.data?.hashtags ?? []) options.push({ key: `h${h.tag}`, href: `/search?q=${encodeURIComponent("#" + h.tag)}`, render: <span className="flex items-center gap-3"><Hash size={18} className="text-fg2" />#{h.tag} <span className="text-sm text-fg2">{h.count} posts</span></span> });
-    for (const t of ta.data?.topics ?? []) options.push({ key: `t${t.slug}`, href: `/i/topics/${t.slug}`, render: <span className="flex items-center gap-3"><MessageSquareText size={18} className="text-fg2" />{t.name} <span className="text-sm text-fg2">Topic</span></span> });
+    for (const t of ta.data?.topics ?? []) options.push({ key: `t${t.slug}`, href: `/i/topics/${t.slug}`, render: <span className="flex items-center gap-3"><MessageSquareText size={18} className="text-fg2" />{t.name} <span className="text-sm text-fg2">Interest</span></span> });
     for (const u of ta.data?.users ?? [])
       options.push({
         key: `u${u.id}`,
@@ -91,7 +91,7 @@ export function SearchBox({ initial = "", autoFocus }: { initial?: string; autoF
           e.preventDefault();
           submit();
         }}
-        className={clsx("flex h-[44px] items-center gap-3 rounded-full border px-4", open ? "border-accent-text bg-bg" : "border-transparent bg-input")}
+        className={clsx("flex h-[42px] items-center gap-3 rounded-xl border px-3.5 transition-colors", open ? "border-accent-text bg-bg" : "border-line bg-input hover:border-line-strong")}
       >
         <Search size={18} className={open ? "text-accent-text" : "text-fg2"} aria-hidden="true" />
         <input
@@ -116,7 +116,7 @@ export function SearchBox({ initial = "", autoFocus }: { initial?: string; autoF
               (e.target as HTMLInputElement).blur();
             }
           }}
-          placeholder="Search iSchoolie"
+          placeholder="Search people, posts, clubs…"
           aria-label="Search query"
           role="combobox"
           aria-expanded={open}
@@ -126,16 +126,16 @@ export function SearchBox({ initial = "", autoFocus }: { initial?: string; autoF
           maxLength={500}
         />
         {value && (
-          <button type="button" aria-label="Clear search" onClick={() => { setValue(""); setActive(-1); }} className="grid h-6 w-6 place-items-center rounded-full bg-accent text-accent-on">
+          <button type="button" aria-label="Clear search" onClick={() => { setValue(""); setActive(-1); }} className="grid h-6 w-6 place-items-center rounded-lg bg-hover-strong text-fg2 hover:text-fg">
             <X size={14} />
           </button>
         )}
       </form>
       {open && (
-        <div id={listId} role="listbox" className="absolute inset-x-0 top-[48px] z-50 max-h-[min(70dvh,560px)] overflow-y-auto rounded-md bg-elevated" style={{ boxShadow: "var(--shadow)" }}>
+        <div id={listId} role="listbox" className="absolute inset-x-0 top-[48px] z-50 max-h-[min(70dvh,560px)] overflow-y-auto rounded-2xl border border-line bg-elevated" style={{ boxShadow: "var(--shadow)" }}>
           {!debounced && (
             <>
-              {history.data && history.data.recent.length === 0 && history.data.saved.length === 0 && <p className="px-4 py-5 text-center text-fg2">Try searching for people, topics, or keywords</p>}
+              {history.data && history.data.recent.length === 0 && history.data.saved.length === 0 && <p className="px-4 py-5 text-center text-fg2">Try searching for people, interests, or keywords</p>}
               {history.data && history.data.recent.length > 0 && (
                 <div>
                   <div className="flex items-center justify-between px-4 py-3">
@@ -159,7 +159,7 @@ export function SearchBox({ initial = "", autoFocus }: { initial?: string; autoF
                       <button
                         type="button"
                         aria-label={`Remove ${r.query} from recent searches`}
-                        className="mr-2 grid h-8 w-8 place-items-center rounded-full text-accent-text hover:bg-accent-soft"
+                        className="mr-2 grid h-8 w-8 place-items-center rounded-xl text-accent-text hover:bg-accent-soft"
                         onClick={async () => {
                           await del(`/search/history/${r.id}`);
                           qc.invalidateQueries({ queryKey: ["search-history"] });

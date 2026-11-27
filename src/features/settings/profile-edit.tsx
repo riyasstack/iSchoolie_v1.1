@@ -85,11 +85,11 @@ export function ProfileEditor() {
       <div className="relative aspect-[3/1] w-full overflow-hidden bg-line-strong">
         {form.bannerUrl && <img src={form.bannerUrl} alt="Header preview" className="h-full w-full object-cover" />}
         <div className="absolute inset-0 flex items-center justify-center gap-3 bg-black/30">
-          <button type="button" aria-label="Add header photo" onClick={() => bannerInput.current?.click()} className="grid h-11 w-11 place-items-center rounded-full bg-black/60 text-white hover:bg-black/40">
+          <button type="button" aria-label="Add header photo" onClick={() => bannerInput.current?.click()} className="grid h-11 w-11 place-items-center rounded-xl bg-black/60 text-white hover:bg-black/40">
             {uploading === "banner" ? <Spinner size={20} /> : <Camera size={20} />}
           </button>
           {form.bannerMediaId && (
-            <button type="button" aria-label="Remove header photo" onClick={() => setForm({ ...form, bannerMediaId: null, bannerUrl: null })} className="grid h-11 w-11 place-items-center rounded-full bg-black/60 text-white hover:bg-black/40">
+            <button type="button" aria-label="Remove header photo" onClick={() => setForm({ ...form, bannerMediaId: null, bannerUrl: null })} className="grid h-11 w-11 place-items-center rounded-xl bg-black/60 text-white hover:bg-black/40">
               <X size={20} />
             </button>
           )}
@@ -97,10 +97,10 @@ export function ProfileEditor() {
         <input ref={bannerInput} type="file" hidden accept="image/jpeg,image/png,image/webp" onChange={onPick("banner")} />
       </div>
       <div className="px-4">
-        <div className="relative -mt-[12%] h-[112px] w-[112px] max-w-[25vw] max-h-[25vw] overflow-hidden rounded-full border-4 border-bg bg-subtle">
+        <div className="relative -mt-[12%] h-[112px] w-[112px] max-w-[25vw] max-h-[25vw] overflow-hidden rounded-xl border-4 border-bg bg-subtle">
           {form.avatarUrl && <img src={form.avatarUrl} alt="Profile photo preview" className="h-full w-full object-cover" />}
           <button type="button" aria-label="Change profile photo" onClick={() => avatarInput.current?.click()} className="absolute inset-0 grid place-items-center bg-black/30 text-white hover:bg-black/20">
-            <span className="grid h-11 w-11 place-items-center rounded-full bg-black/60">{uploading === "avatar" ? <Spinner size={20} /> : <Camera size={20} />}</span>
+            <span className="grid h-11 w-11 place-items-center rounded-xl bg-black/60">{uploading === "avatar" ? <Spinner size={20} /> : <Camera size={20} />}</span>
           </button>
           <input ref={avatarInput} type="file" hidden accept="image/jpeg,image/png,image/webp" onChange={onPick("avatar")} />
         </div>

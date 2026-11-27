@@ -30,11 +30,11 @@ function useTopicFollow() {
 export function TopicChip({ t }: { t: TopicDTO }) {
   const m = useTopicFollow();
   return (
-    <span className={clsx("inline-flex items-center overflow-hidden rounded-full border", t.following ? "border-accent bg-accent text-accent-on" : "border-line-strong")}>
+    <span className={clsx("inline-flex items-center overflow-hidden rounded-xl border", t.following ? "border-accent bg-accent text-accent-on" : "border-line-strong")}>
       <Link href={`/i/topics/${t.slug}`} className="py-1 pl-3 pr-2 font-bold hover:underline">
         {t.name}
       </Link>
-      <button type="button" disabled={m.isPending} onClick={() => m.mutate(t)} aria-label={t.following ? `Unfollow topic ${t.name}` : `Follow topic ${t.name}`} className={clsx("grid h-8 w-8 place-items-center border-l", t.following ? "border-white/40" : "border-line-strong text-accent-text hover:bg-accent-soft")}>
+      <button type="button" disabled={m.isPending} onClick={() => m.mutate(t)} aria-label={t.following ? `Unfollow interest ${t.name}` : `Follow interest ${t.name}`} className={clsx("grid h-8 w-8 place-items-center border-l", t.following ? "border-white/40" : "border-line-strong text-accent-text hover:bg-accent-soft")}>
         {t.following ? <Check size={16} /> : <Plus size={16} />}
       </button>
     </span>
@@ -45,21 +45,21 @@ export function TopicsView() {
   const q = useQuery({ queryKey: ["topics"], queryFn: () => get<{ followed: TopicDTO[]; suggested: TopicDTO[] }>("/topics") });
   return (
     <div>
-      <PageHeader title="Topics" back />
+      <PageHeader title="Interests" back />
       {q.isPending && <Spinner className="py-8" />}
       {q.isError && <ErrorState message={errorMessage(q.error)} onRetry={() => q.refetch()} />}
       {q.data && (
         <>
-          <SectionHeading>Followed Topics</SectionHeading>
+          <SectionHeading>Followed Interests</SectionHeading>
           {q.data.followed.length === 0 ? (
-            <p className="px-4 pb-4 text-fg2">You aren’t following any Topics yet. When you do, posts about them show up in Home.</p>
+            <p className="px-4 pb-4 text-fg2">You aren’t following any Interests yet. When you do, posts about them show up in your Feed.</p>
           ) : (
             <ul className="border-b border-line">
               {q.data.followed.map((t) => <TopicRow key={t.slug} t={t} />)}
             </ul>
           )}
-          <SectionHeading>Suggested Topics</SectionHeading>
-          <p className="-mt-2 px-4 pb-3 text-sm text-fg2">Suggestions are the demo’s topics you don’t follow yet, ordered by name.</p>
+          <SectionHeading>Suggested Interests</SectionHeading>
+          <p className="-mt-2 px-4 pb-3 text-sm text-fg2">Suggestions are the demo’s interests you don’t follow yet, ordered by name.</p>
           <div className="flex flex-wrap gap-2 px-4 pb-6">{q.data.suggested.map((t) => <TopicChip key={t.slug} t={t} />)}</div>
         </>
       )}
@@ -88,14 +88,14 @@ export function TopicView({ slug }: { slug: string }) {
   if (q.isError)
     return (
       <div>
-        <PageHeader title="Topic" back />
-        {q.error instanceof ApiError && q.error.status === 404 ? <EmptyState title="This Topic doesn’t exist" action={<Link href="/i/topics" className="text-accent-text">Browse Topics</Link>} /> : <ErrorState message={errorMessage(q.error)} onRetry={() => q.refetch()} />}
+        <PageHeader title="Interest" back />
+        {q.error instanceof ApiError && q.error.status === 404 ? <EmptyState title="This Interest doesn’t exist" action={<Link href="/i/topics" className="text-accent-text">Browse Interests</Link>} /> : <ErrorState message={errorMessage(q.error)} onRetry={() => q.refetch()} />}
       </div>
     );
   const t = q.data;
   return (
     <div>
-      <PageHeader title={t?.name ?? "Topic"} back />
+      <PageHeader title={t?.name ?? "Interest"} back />
       {t && (
         <div className="border-b border-line px-4 py-4">
           <h2 className="text-display font-extrabold">{t.name}</h2>
@@ -106,7 +106,7 @@ export function TopicView({ slug }: { slug: string }) {
           </Button>
         </div>
       )}
-      <Timeline queryKey={["topic-timeline", slug]} path={`/topics/${slug}/timeline`} empty={<EmptyState title="Nothing here yet" body="When people post about this Topic, their posts will show up here." />} />
+      <Timeline queryKey={["topic-timeline", slug]} path={`/topics/${slug}/timeline`} empty={<EmptyState title="Nothing here yet" body="When people post about this Interest, their posts will show up here." />} />
     </div>
   );
 }

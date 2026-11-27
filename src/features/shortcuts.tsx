@@ -5,11 +5,11 @@ import { useRouter } from "next/navigation";
 import { useSession } from "@/components/providers";
 
 export const SHORTCUTS: { group: string; items: [string, string][] }[] = [
-  { group: "Actions", items: [["n", "New post"], ["l", "Like"], ["r", "Reply"], ["t", "Repost"], ["m", "Direct message"], ["/", "Search"], ["?", "This menu"]] },
+  { group: "Actions", items: [["n", "New post"], ["l", "Cheer"], ["r", "Reply"], ["t", "Share"], ["m", "Direct message"], ["/", "Search"], ["?", "This menu"]] },
   { group: "Navigation", items: [["j", "Next post"], ["k", "Previous post"], ["Enter", "Open post details"], ["Space", "Page down"], ["."," Load new posts"]] },
   {
     group: "Go to",
-    items: [["g h", "Home"], ["g e", "Explore"], ["g n", "Notifications"], ["g r", "Mentions"], ["g p", "Profile"], ["g l", "Likes"], ["g i", "Lists"], ["g m", "Messages"], ["g s", "Settings"], ["g b", "Bookmarks"]],
+    items: [["g h", "Feed"], ["g e", "Discover"], ["g n", "Alerts"], ["g r", "Mentions"], ["g p", "Profile"], ["g l", "Cheers"], ["g i", "Circles"], ["g m", "Inbox"], ["g s", "Settings"], ["g b", "Saved"]],
   },
 ];
 

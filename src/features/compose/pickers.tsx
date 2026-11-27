@@ -94,11 +94,11 @@ function EmojiPanel({ onPick }: { onPick: (e: string) => void }) {
   return (
     <div>
       <label className="sr-only" htmlFor="emoji-search">Search emoji</label>
-      <input id="emoji-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search emoji" autoFocus className="mb-2 h-9 w-full rounded-full bg-input px-3 outline-none" />
+      <input id="emoji-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search emoji" autoFocus className="mb-2 h-9 w-full rounded-xl bg-input px-3 outline-none" />
       {!query && (
         <div className="no-scrollbar flex gap-1 overflow-x-auto border-b border-line pb-2" role="tablist" aria-label="Emoji categories">
           {[...(recent.length ? [{ id: "recent" as const, name: "Recent" }] : []), ...GROUPS].map((c) => (
-            <button key={c.id} type="button" role="tab" aria-selected={c.id === group} onClick={() => setGroup(c.id)} className={clsx("shrink-0 rounded-full px-2 py-1 text-xs font-bold", c.id === group ? "bg-accent-soft text-accent-text" : "text-fg2 hover:bg-hover-strong")}>
+            <button key={c.id} type="button" role="tab" aria-selected={c.id === group} onClick={() => setGroup(c.id)} className={clsx("shrink-0 rounded-xl px-2 py-1 text-xs font-semibold", c.id === group ? "bg-accent-soft text-accent-text" : "text-fg2 hover:bg-hover-strong")}>
               {c.name}
             </button>
           ))}
@@ -133,7 +133,7 @@ export function GifPicker({ open, onClose, onPick }: { open: boolean; onClose: (
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()} title="Choose a GIF" fullScreenMobile>
       <div className="border-b border-line px-4 py-2">
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search the bundled GIF collection" aria-label="Search GIFs" className="h-10 w-full rounded-full bg-input px-4 outline-none" />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search the bundled GIF collection" aria-label="Search GIFs" className="h-10 w-full rounded-xl bg-input px-4 outline-none" />
         <p className="mt-2 text-xs text-fg2">This demo uses a small bundled collection of original animations. No external GIF service is connected.</p>
       </div>
       {gifs.isPending && <Spinner className="py-8" />}

@@ -362,8 +362,8 @@ export async function profileTimeline(ctx: RequestContext, handle: string, tab: 
 export async function listTimeline(ctx: RequestContext, listId: string, cursorStr?: string | null): Promise<TimelinePage> {
   const g = await loadViewerGraph(prisma, ctx);
   const list = await prisma.list.findFirst({ where: { workspaceId: ctx.workspace.id, id: listId }, include: { members: { select: { userId: true } }, owner: { select: userSelect } } });
-  if (!list || (list.isPrivate && list.ownerId !== g.id)) throw notFound("That list");
-  if (list.ownerId !== g.id && (g.blockedBy.has(list.ownerId) || g.blocking.has(list.ownerId))) throw notFound("That list");
+  if (!list || (list.isPrivate && list.ownerId !== g.id)) throw notFound("That circle");
+  if (list.ownerId !== g.id && (g.blockedBy.has(list.ownerId) || g.blocking.has(list.ownerId))) throw notFound("That circle");
   const cursor = decode<ChronoCursor>(cursorStr);
   const members = list.members.map((m) => m.userId);
   if (!members.length) return { entries: [], posts: [], nextCursor: null };
@@ -383,7 +383,7 @@ export async function listTimeline(ctx: RequestContext, listId: string, cursorSt
 export async function topicTimeline(ctx: RequestContext, slug: string, cursorStr?: string | null): Promise<TimelinePage> {
   const g = await loadViewerGraph(prisma, ctx);
   const topic = await prisma.topic.findUnique({ where: { workspaceId_slug: { workspaceId: ctx.workspace.id, slug } } });
-  if (!topic) throw notFound("That topic");
+  if (!topic) throw notFound("That interest");
   const cursor = decode<ChronoCursor>(cursorStr);
   const rows = await prisma.post.findMany({
     where: {

@@ -53,7 +53,7 @@ function Unavailable({ env }: { env: AuthEnv }) {
           : "This server is in live mode, but Supabase Auth isn’t configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (see AUTH_INTEGRATION.md)."}
       </p>
       <div className="mt-6 px-4">
-        <Link href="/home" className="inline-flex min-h-[36px] items-center rounded-full bg-accent px-4 font-bold text-accent-on">Go to Home</Link>
+        <Link href="/home" className="inline-flex min-h-[36px] items-center rounded-xl bg-accent px-4 font-semibold text-accent-on">Go to Home</Link>
       </div>
     </AuthCard>
   );
@@ -114,11 +114,11 @@ function OAuthButtons({ next, verb, onError, enabled }: { next: string; verb: st
   };
   return (
     <div className="flex flex-col gap-3 px-4">
-      <button type="button" onClick={() => go("google")} disabled={!!busy || !enabled.google} title={enabled.google ? undefined : "Google sign-in isn’t enabled for this site yet"} data-provider="google" className="inline-flex min-h-[44px] w-full items-center justify-center gap-3 rounded-full border border-line-strong bg-white px-4 font-bold text-[#0f1419] hover:bg-[#f7f9f9] disabled:opacity-60">
+      <button type="button" onClick={() => go("google")} disabled={!!busy || !enabled.google} title={enabled.google ? undefined : "Google sign-in isn’t enabled for this site yet"} data-provider="google" className="inline-flex min-h-[44px] w-full items-center justify-center gap-3 rounded-xl border border-line-strong bg-white px-4 font-semibold text-[#0f1419] hover:bg-[#f7f9f9] disabled:opacity-60">
         <GoogleIcon /> {busy === "google" ? "Redirecting…" : `${verb} with Google`}
         {!enabled.google && <span className="text-xs font-normal">(not enabled yet)</span>}
       </button>
-      <button type="button" onClick={() => go("github")} disabled={!!busy || !enabled.github} title={enabled.github ? undefined : "GitHub sign-in isn’t enabled for this site yet"} data-provider="github" className="inline-flex min-h-[44px] w-full items-center justify-center gap-3 rounded-full bg-[#24292f] px-4 font-bold text-white hover:bg-[#32383f] disabled:opacity-60">
+      <button type="button" onClick={() => go("github")} disabled={!!busy || !enabled.github} title={enabled.github ? undefined : "GitHub sign-in isn’t enabled for this site yet"} data-provider="github" className="inline-flex min-h-[44px] w-full items-center justify-center gap-3 rounded-xl bg-[#24292f] px-4 font-semibold text-white hover:bg-[#32383f] disabled:opacity-60">
         <GitHubIcon /> {busy === "github" ? "Redirecting…" : `${verb} with GitHub`}
         {!enabled.github && <span className="text-xs font-normal">(not enabled yet)</span>}
       </button>

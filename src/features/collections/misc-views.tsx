@@ -33,22 +33,22 @@ export function BookmarksView() {
   return (
     <div>
       <PageHeader
-        title="Bookmarks"
+        title="Saved"
         subtitle={`@${s.actor.handle}`}
         back
         right={
-          <Menu label="More" trigger={<button type="button" aria-label="More" className="grid h-[34px] w-[34px] place-items-center rounded-full text-accent-text hover:bg-accent-soft"><MoreHorizontal size={20} /></button>}>
-            <MenuItem icon={<Trash2 />} danger onSelect={() => setConfirm(true)}>Clear all Bookmarks</MenuItem>
+          <Menu label="More" trigger={<button type="button" aria-label="More" className="grid h-[34px] w-[34px] place-items-center rounded-xl text-accent-text hover:bg-accent-soft"><MoreHorizontal size={20} /></button>}>
+            <MenuItem icon={<Trash2 />} danger onSelect={() => setConfirm(true)}>Clear all Saved</MenuItem>
           </Menu>
         }
       />
       <Timeline
         queryKey={["bookmarks"]}
         path="/bookmarks"
-        empty={<EmptyState title="You haven’t added any posts to your Bookmarks yet" body="When you do, they’ll show up here. Use the share icon on a post to bookmark it." />}
+        empty={<EmptyState title="You haven’t added any posts to your Saved yet" body="When you do, they’ll show up here. Use Send → Save post on any post." />}
       />
-      <p className="px-4 py-4 text-center text-xs text-fg2">Bookmarks are private. Posts that are deleted or become unavailable to you are skipped.</p>
-      <ConfirmDialog open={confirm} onOpenChange={setConfirm} title="Clear all Bookmarks?" body="This can’t be undone and you’ll remove all posts you’ve added to your Bookmarks." confirmLabel="Clear" danger busy={clear.isPending} onConfirm={() => clear.mutate()} />
+      <p className="px-4 py-4 text-center text-xs text-fg2">Saved posts are private. Posts that are deleted or become unavailable to you are skipped.</p>
+      <ConfirmDialog open={confirm} onOpenChange={setConfirm} title="Clear all Saved?" body="This can’t be undone and you’ll remove all posts you’ve added to your Saved." confirmLabel="Clear" danger busy={clear.isPending} onConfirm={() => clear.mutate()} />
     </div>
   );
 }

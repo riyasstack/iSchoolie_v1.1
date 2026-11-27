@@ -9,7 +9,7 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
     title: "About demo mode",
     body: (
       <>
-        <p>iSchoolie is running as an isolated demo. When you first open it, the server creates a private workspace for your browser session and fills it with fictional people, posts, messages and lists. Nothing you do is visible to other visitors, and their workspaces are invisible to you.</p>
+        <p>iSchoolie is running as an isolated demo. When you first open it, the server creates a private workspace for your browser session and fills it with fictional people, posts, messages and circles. Nothing you do is visible to other visitors, and their workspaces are invisible to you.</p>
         <p>Your workspace is kept for a limited time after your last visit (see Settings → Demo environment) and then deleted, including uploads. The session is anonymous: it isn’t an account and can’t be restored on another device.</p>
         <p>Demo-only testing controls let you switch between the seeded fictional identities and reset the workspace. Those controls will not exist once real sign-in is connected.</p>
       </>
@@ -20,7 +20,7 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
     title: "Home and Latest",
     body: (
       <>
-        <p><b>Home</b> shows recent posts (last 14 days) from you, people you follow, reposts by people you follow, posts matching Topics you follow, and posts liked by at least two people you follow. They’re ordered by a simple, documented score: recency (half-life of 18 hours) multiplied by an engagement boost and a weight for the source. It isn’t a recreation of any proprietary ranking algorithm.</p>
+        <p><b>Feed</b> shows recent posts (last 14 days) from you, people you follow, reposts by people you follow, posts matching Topics you follow, and posts liked by at least two people you follow. They’re ordered by a simple, documented score: recency (half-life of 18 hours) multiplied by an engagement boost and a weight for the source. It isn’t a recreation of any proprietary ranking algorithm.</p>
         <p><b>Latest</b> shows only posts from you and people you follow (and their reposts), newest first, with no recommendations. Switch with the ✦ button on Home.</p>
         <p>Both respect blocks, mutes and muted words. New posts never push the timeline down by themselves — use “Show new posts”.</p>
       </>
@@ -41,16 +41,16 @@ const SECTIONS: { id: string; title: string; body: React.ReactNode }[] = [
     title: "Privacy and safety",
     body: (
       <>
-        <p><b>Protected posts</b> are visible only to approved followers — in timelines, search, quotes, media links and Moments. Protected posts can’t be reposted.</p>
+        <p><b>Protected posts</b> are visible only to approved followers — in timelines, search, quotes, media links and Stories. Protected posts can’t be shared.</p>
         <p><b>Blocking</b> stops someone from following you, seeing your posts, replying, or messaging you, and removes follows between you. <b>Muting</b> only changes what you see; the muted person isn’t told.</p>
         <p><b>Reports</b> are saved in your workspace with a reference number. Submitting a report doesn’t mean any action has been taken; there’s no live moderation team in this demo.</p>
-        <p><b>Messages</b> from people you don’t follow arrive as requests. Deleting a message removes it only for you.</p>
+        <p><b>Inbox:</b> messages from people you don’t follow arrive as requests. Deleting a message removes it only for you.</p>
       </>
     ),
   },
   {
     id: "trends",
-    title: "Trends",
+    title: "Buzzing",
     body: <p>Trends labelled “Measured in this demo” are hashtags counted from posts in your workspace over the last 7 days (by at least two people). Trends labelled “Curated for this demo” are editorial entries; the post counts shown are real matches in your workspace.</p>,
   },
 ];
@@ -59,15 +59,15 @@ export function HelpView() {
   return (
     <div>
       <PageHeader title="Help Center" back />
-      <nav aria-label="Help topics" className="border-b border-line px-4 py-3">
+      <nav aria-label="Help interests" className="border-b border-line px-4 py-3">
         <ul className="flex flex-wrap gap-2">
           {SECTIONS.map((s) => (
             <li key={s.id}>
-              <a href={`#${s.id}`} className="inline-block rounded-full border border-line-strong px-3 py-1 text-sm font-bold hover:bg-hover-strong">{s.title}</a>
+              <a href={`#${s.id}`} className="inline-block rounded-xl border border-line-strong px-3 py-1 text-sm font-semibold hover:bg-hover-strong">{s.title}</a>
             </li>
           ))}
           <li>
-            <a href="#shortcuts" className="inline-block rounded-full border border-line-strong px-3 py-1 text-sm font-bold hover:bg-hover-strong">Keyboard shortcuts</a>
+            <a href="#shortcuts" className="inline-block rounded-xl border border-line-strong px-3 py-1 text-sm font-semibold hover:bg-hover-strong">Keyboard shortcuts</a>
           </li>
         </ul>
       </nav>

@@ -23,8 +23,8 @@ import type { PreferencesDTO, SessionDTO, UserListItem } from "@/lib/types";
 const NAV: { href: string; label: string; desc: string }[] = [
   { href: "/settings/account", label: "Your account", desc: "Account information and demo session details" },
   { href: "/settings/privacy_and_safety", label: "Privacy and safety", desc: "Protected posts, messages, sensitive content" },
-  { href: "/settings/notifications", label: "Notifications", desc: "Which in-app notifications you get" },
-  { href: "/settings/content", label: "Content preferences", desc: "Explore, search and Topics" },
+  { href: "/settings/notifications", label: "Alerts", desc: "Which in-app alerts you get" },
+  { href: "/settings/content", label: "Content preferences", desc: "Discover, search and Interests" },
   { href: "/settings/display", label: "Display", desc: "Theme, color and font size" },
   { href: "/settings/accessibility", label: "Accessibility", desc: "Motion and media descriptions" },
   { href: "/settings/data", label: "Data usage", desc: "Autoplay and data saver" },
@@ -244,13 +244,13 @@ export function PrivacySettings() {
       <Section title="Your posts">
         <Switch
           label="Protect your posts"
-          description="When on, only your approved followers can see your posts, media, likes and lists of who you follow. Turning this off approves pending follow requests."
+          description="When on, only your approved followers can see your posts, media, cheers and lists of who you follow. Turning this off approves pending follow requests."
           checked={s.actor.isProtected}
           onChange={(v) => account.mutate({ isProtected: v })}
         />
       </Section>
       <section id="messages">
-        <Section title="Direct Messages">
+        <Section title="Inbox">
           <Switch label="Allow message requests from everyone" description="When off, only people you follow can message you. People you don’t follow land in Message requests when on." checked={s.actor.dmPolicy === "EVERYONE"} onChange={(v) => account.mutate({ dmPolicy: v ? "EVERYONE" : "FOLLOWING" })} />
           <Switch label="Show read receipts" description="Let people you message know when you’ve seen their messages. Read receipts show only when both of you allow them." checked={prefs.showReadReceipts} onChange={(v) => set({ showReadReceipts: v })} />
         </Section>
@@ -260,8 +260,8 @@ export function PrivacySettings() {
         <Switch label="Hide sensitive content in search" checked={prefs.searchHideSensitive} onChange={(v) => set({ searchHideSensitive: v })} />
       </Section>
       <Section title="Safety">
-        <NavRow href="/settings/muted_keywords" label="Muted words" desc="Hide posts with these words from Home and notifications" />
-        <NavRow href="/settings/muted/all" label="Muted accounts" desc="You won’t see their posts in your timelines or their notifications" />
+        <NavRow href="/settings/muted_keywords" label="Muted words" desc="Hide posts with these words from your Feed and alerts" />
+        <NavRow href="/settings/muted/all" label="Muted accounts" desc="You won’t see their posts in your timelines or their alerts" />
         <NavRow href="/settings/blocked/all" label="Blocked accounts" desc="They can’t follow, message or see your posts" />
         <NavRow href="/i/follower_requests" label="Follower requests" desc="Approve who can see your protected posts" />
       </Section>
@@ -300,7 +300,7 @@ export function AccountsList({ kind }: { kind: "blocked" | "muted" }) {
       <p className="border-b border-line px-4 py-3 text-sm text-fg2">
         {kind === "blocked"
           ? "Blocked accounts can’t follow you, see your posts, reply, or message you, and you won’t see theirs. Blocking removed any follows between you."
-          : "Muting hides an account’s posts from your Home, Latest, search and notifications. They aren’t notified, and can still see and reply to your posts."}
+          : "Muting hides an account’s posts from your Feed, Latest, search and alerts. They aren’t notified, and can still see and reply to your posts."}
       </p>
       {q.isPending && <UserSkeleton count={3} />}
       {q.isError && <ErrorState message={errorMessage(q.error)} onRetry={() => q.refetch()} />}
@@ -354,8 +354,8 @@ export function MutedWords() {
         <div className="border-b border-line pb-3">
           <TextField label="Word or phrase" value={phrase} onChange={setPhrase} max={100} autoFocus />
           <p className="px-4 text-sm font-bold">Mute from</p>
-          <Checkbox label="Home timeline" checked={inHome} onChange={setInHome} />
-          <Checkbox label="Notifications" checked={inNotif} onChange={setInNotif} />
+          <Checkbox label="Feed" checked={inHome} onChange={setInHome} />
+          <Checkbox label="Alerts" checked={inNotif} onChange={setInNotif} />
           <fieldset className="px-4 py-2">
             <legend className="text-sm font-bold">For how long?</legend>
             {[
@@ -384,10 +384,10 @@ export function MutedWords() {
             <div className="min-w-0 flex-1">
               <div className="font-bold break-anywhere">{w.phrase}</div>
               <div className="text-sm text-fg2">
-                {[w.inHome && "Home", w.inNotifications && "Notifications"].filter(Boolean).join(", ")} · {w.expired ? "Expired" : w.expiresAt ? `Until ${new Date(w.expiresAt).toLocaleString()}` : "Forever"}
+                {[w.inHome && "Feed", w.inNotifications && "Alerts"].filter(Boolean).join(", ")} · {w.expired ? "Expired" : w.expiresAt ? `Until ${new Date(w.expiresAt).toLocaleString()}` : "Forever"}
               </div>
             </div>
-            <button type="button" aria-label={`Unmute ${w.phrase}`} onClick={() => remove.mutate(w.id)} className="grid h-9 w-9 place-items-center rounded-full text-danger hover:bg-like-soft"><Trash2 size={18} /></button>
+            <button type="button" aria-label={`Unmute ${w.phrase}`} onClick={() => remove.mutate(w.id)} className="grid h-9 w-9 place-items-center rounded-xl text-danger hover:bg-like-soft"><Trash2 size={18} /></button>
           </li>
         ))}
       </ul>
@@ -400,23 +400,23 @@ export function NotificationSettings() {
   const { prefs, set } = usePrefs();
   return (
     <div>
-      <PageHeader title="Notifications" back="/settings" />
-      <Section title="In-app notifications" desc="Turning a type off stops new notifications of that type from being created for you.">
-        <Switch label="Likes" checked={prefs.notifyLikes} onChange={(v) => set({ notifyLikes: v })} />
-        <Switch label="Reposts" checked={prefs.notifyReposts} onChange={(v) => set({ notifyReposts: v })} />
+      <PageHeader title="Alerts" back="/settings" />
+      <Section title="In-app alerts" desc="Turning a type off stops new alerts of that type from being created for you.">
+        <Switch label="Cheers" checked={prefs.notifyLikes} onChange={(v) => set({ notifyLikes: v })} />
+        <Switch label="Shares" checked={prefs.notifyReposts} onChange={(v) => set({ notifyReposts: v })} />
         <Switch label="Replies" checked={prefs.notifyReplies} onChange={(v) => set({ notifyReplies: v })} />
         <Switch label="Mentions" checked={prefs.notifyMentions} onChange={(v) => set({ notifyMentions: v })} />
-        <Switch label="Quote Posts" checked={prefs.notifyQuotes} onChange={(v) => set({ notifyQuotes: v })} />
+        <Switch label="Quote shares" checked={prefs.notifyQuotes} onChange={(v) => set({ notifyQuotes: v })} />
         <Switch label="New followers" checked={prefs.notifyFollows} onChange={(v) => set({ notifyFollows: v })} />
       </Section>
-      <Section title="Filters" desc="Filters hide matching notifications from your list and badge; they can be turned back off.">
-        <Checkbox label="Hide notifications from people you don’t follow" checked={prefs.filterNotFollowing} onChange={(v) => set({ filterNotFollowing: v })} />
-        <Checkbox label="Hide notifications from accounts without a profile photo" checked={prefs.filterNoAvatar} onChange={(v) => set({ filterNoAvatar: v })} />
+      <Section title="Filters" desc="Filters hide matching alerts from your Alerts and badge; they can be turned back off.">
+        <Checkbox label="Hide alerts from people you don’t follow" checked={prefs.filterNotFollowing} onChange={(v) => set({ filterNotFollowing: v })} />
+        <Checkbox label="Hide alerts from accounts without a profile photo" checked={prefs.filterNoAvatar} onChange={(v) => set({ filterNoAvatar: v })} />
         <Link href="/settings/muted_keywords" className="block px-4 py-3 text-accent-text hover:underline">Muted words</Link>
       </Section>
-      <Section title="Push and email notifications" desc="No push or email delivery service is connected to this demo, so these channels are unavailable. Nothing is sent outside the app.">
-        <p className="px-4 py-3 text-sm text-fg2" aria-disabled="true">Push notifications · Not available</p>
-        <p className="px-4 pb-3 text-sm text-fg2" aria-disabled="true">Email notifications · Not available</p>
+      <Section title="Push and email alerts" desc="No push or email delivery service is connected to this demo, so these channels are unavailable. Nothing is sent outside the app.">
+        <p className="px-4 py-3 text-sm text-fg2" aria-disabled="true">Push alerts · Not available</p>
+        <p className="px-4 pb-3 text-sm text-fg2" aria-disabled="true">Email alerts · Not available</p>
       </Section>
     </div>
   );
@@ -427,15 +427,15 @@ export function ContentSettings() {
   return (
     <div>
       <PageHeader title="Content preferences" back="/settings" />
-      <Section title="Explore">
+      <Section title="Discover">
         <Switch label="Hide sensitive content in search" checked={prefs.searchHideSensitive} onChange={(v) => set({ searchHideSensitive: v })} />
         <p className="px-4 pb-3 text-sm text-fg2">Trends in this demo are either measured from posts in your workspace or curated for the demo; each is labelled. There’s no location targeting.</p>
       </Section>
       <Section title="Timeline">
         <Switch label="Show the best posts first (Home)" description="When off, your timeline shows the latest posts first (Latest)." checked={prefs.timelineMode === "home"} onChange={(v) => set({ timelineMode: v ? "home" : "latest" })} />
       </Section>
-      <Section title="Topics">
-        <NavRow href="/i/topics" label="Topics" desc="Manage the Topics you follow" />
+      <Section title="Interests">
+        <NavRow href="/i/topics" label="Interests" desc="Manage the Interests you follow" />
       </Section>
       <Section title="Safety">
         <NavRow href="/settings/muted_keywords" label="Muted words" />
@@ -473,7 +473,7 @@ export function DisplaySettingsBody() {
       <h3 className="mt-5 text-sm font-bold text-fg2">Color</h3>
       <div className="mt-2 flex flex-wrap justify-around gap-3 rounded-card bg-subtle px-4 py-3" role="radiogroup" aria-label="Accent color">
         {ACCENTS.map((a) => (
-          <button key={a.key} type="button" role="radio" aria-checked={prefs.accent === a.key} aria-label={a.label} title={a.label} onClick={() => set({ accent: a.key })} className="grid h-11 w-11 place-items-center rounded-full text-white" style={{ background: a.color }}>
+          <button key={a.key} type="button" role="radio" aria-checked={prefs.accent === a.key} aria-label={a.label} title={a.label} onClick={() => set({ accent: a.key })} className="grid h-11 w-11 place-items-center rounded-xl text-white" style={{ background: a.color }}>
             {prefs.accent === a.key && <Check size={22} />}
           </button>
         ))}
@@ -482,13 +482,13 @@ export function DisplaySettingsBody() {
       <div className="mt-2 grid grid-cols-1 gap-2 rounded-card bg-subtle p-3 sm:grid-cols-3" role="radiogroup" aria-label="Background">
         {(
           [
-            ["DEFAULT", "Default", "#ffffff", "#14171a"],
-            ["DIM", "Dim", "#15202b", "#ffffff"],
-            ["LIGHTS_OUT", "Lights out", "#000000", "#d9d9d9"],
+            ["DEFAULT", "Light", "#f3f2fa", "#1d1b2f"],
+            ["DIM", "Dusk", "#211f36", "#f1f0fb"],
+            ["LIGHTS_OUT", "Midnight", "#111019", "#e6e5f2"],
           ] as const
         ).map(([k, label, bg, fg]) => (
           <button key={k} type="button" role="radio" aria-checked={prefs.theme === k} onClick={() => set({ theme: k })} className={clsx("flex min-h-[62px] items-center gap-3 rounded-md border-2 px-4 font-bold", prefs.theme === k ? "border-accent" : "border-transparent")} style={{ background: bg, color: fg }}>
-            <span className={clsx("grid h-5 w-5 place-items-center rounded-full border-2", prefs.theme === k ? "border-accent bg-accent text-white" : "border-current")}>{prefs.theme === k && <Check size={12} />}</span>
+            <span className={clsx("grid h-5 w-5 place-items-center rounded-xl border-2", prefs.theme === k ? "border-accent bg-accent text-white" : "border-current")}>{prefs.theme === k && <Check size={12} />}</span>
             {label}
           </button>
         ))}

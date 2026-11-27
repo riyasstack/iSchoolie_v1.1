@@ -19,7 +19,7 @@ import type { MomentDTO, TopicDTO, TrendDTO } from "@/lib/types";
 
 const CATEGORIES = [
   { key: "for-you", label: "For you" },
-  { key: "trending", label: "Trending" },
+  { key: "trending", label: "Buzzing" },
   { key: "Learning", label: "Learning" },
   { key: "Science", label: "Science" },
   { key: "Sports", label: "Sports" },
@@ -38,13 +38,13 @@ export function ExploreView() {
   const story = moments.data?.discover[0];
   return (
     <div>
-      <PageHeader topLevel border={false} right={<Link href="/settings/content" aria-label="Explore settings" className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-full text-accent-text hover:bg-accent-soft"><Settings size={20} /></Link>}>
+      <PageHeader topLevel border={false} right={<Link href="/settings/content" aria-label="Discover settings" className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-xl text-accent-text hover:bg-accent-soft"><Settings size={20} /></Link>}>
         <div className="min-w-0 flex-1 py-1">
           <SearchBox />
         </div>
       </PageHeader>
-      <ButtonTabs label="Explore categories" tabs={CATEGORIES.map((c) => ({ key: c.key, label: c.label }))} active={tab as (typeof CATEGORIES)[number]["key"]} onChange={(k) => router.replace(`/explore?tab=${encodeURIComponent(k)}`, { scroll: false })} />
-      {/* Reserve the story's space while loading so the trends below don't shift. */}
+      <ButtonTabs label="Discover categories" tabs={CATEGORIES.map((c) => ({ key: c.key, label: c.label }))} active={tab as (typeof CATEGORIES)[number]["key"]} onChange={(k) => router.replace(`/explore?tab=${encodeURIComponent(k)}`, { scroll: false })} />
+      {/* Reserve the story's space while loading so the buzzing interests below don't shift. */}
       {tab === "for-you" && moments.isPending && <div className="skeleton aspect-[2/1] max-h-[300px] w-full" aria-hidden="true" />}
       {tab === "for-you" && story && (
         <Link href={`/i/moments/${story.id}`} className="relative block aspect-[2/1] max-h-[300px] w-full overflow-hidden border-b border-line bg-subtle">
@@ -55,9 +55,9 @@ export function ExploreView() {
           </div>
         </Link>
       )}
-      <section aria-label="Trends">
-        <h2 className="px-4 pb-1 pt-3 text-heading font-extrabold">{tab === "for-you" ? "Trends for you" : tab === "trending" ? "Trending in this demo" : `${tab}`}</h2>
-        <p className="px-4 pb-2 text-xs text-fg2">“Measured” trends are hashtags counted from posts in your demo workspace over the last 7 days. “Curated” trends are editorial picks for the demo.</p>
+      <section aria-label="Buzzing">
+        <h2 className="px-4 pb-1 pt-3 text-heading font-extrabold">{tab === "for-you" ? "Buzzing for you" : tab === "trending" ? "Buzzing in this demo" : `${tab}`}</h2>
+        <p className="px-4 pb-2 text-xs text-fg2">“Measured” buzzing interests are hashtags counted from posts in your demo workspace over the last 7 days. “Curated” buzzing interests are editorial picks for the demo.</p>
         {trends.isPending && (
           <div aria-hidden="true">
             {Array.from({ length: 8 }, (_, i) => (
@@ -70,17 +70,17 @@ export function ExploreView() {
           </div>
         )}
         {trends.isError && <ErrorState message={errorMessage(trends.error)} onRetry={() => trends.refetch()} />}
-        {trends.data?.length === 0 && <EmptyState title="No trends here yet" body="Trends appear when several people post about the same thing." />}
+        {trends.data?.length === 0 && <EmptyState title="No buzzing interests here yet" body="Topics start buzzing when several people post about the same thing." />}
         {!!trends.data?.length && <div className="border-b border-line">{trends.data.map((t, i) => <TrendRow key={t.key} t={t} rank={i + 1} />)}</div>}
       </section>
       {/* Rendered only after trends so it can't be pushed down when they arrive. */}
       {tab === "for-you" && trends.data && topics.data && topics.data.suggested.length > 0 && (
-        <section aria-label="Topics to follow" className="border-b border-line px-4 py-4">
+        <section aria-label="Interests to follow" className="border-b border-line px-4 py-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-heading font-extrabold">Topics to follow</h2>
+            <h2 className="text-heading font-extrabold">Interests to follow</h2>
             <Link href="/i/topics" className="text-sm text-accent-text hover:underline">See all</Link>
           </div>
-          <p className="text-sm text-fg2">Following a topic adds matching posts to Home.</p>
+          <p className="text-sm text-fg2">Following an interest adds matching posts to your Feed.</p>
           <div className="mt-3 flex flex-wrap gap-2">{topics.data.suggested.slice(0, 8).map((t) => <TopicChip key={t.slug} t={t} />)}</div>
         </section>
       )}
@@ -119,11 +119,11 @@ export function SearchView() {
       <PageHeader back="/explore" border={false} right={
         <div className="flex">
           {q && (
-            <button type="button" onClick={() => save.mutate()} aria-label={saved ? "Remove saved search" : "Save search"} title={saved ? "Remove saved search" : "Save search"} className="grid h-[34px] w-[34px] place-items-center rounded-full text-accent-text hover:bg-accent-soft">
+            <button type="button" onClick={() => save.mutate()} aria-label={saved ? "Remove saved search" : "Save search"} title={saved ? "Remove saved search" : "Save search"} className="grid h-[34px] w-[34px] place-items-center rounded-xl text-accent-text hover:bg-accent-soft">
               {saved ? <BookmarkCheck size={20} /> : <Bookmark size={20} />}
             </button>
           )}
-          <Link href={`/search-advanced${q ? `?q=${encodeURIComponent(q)}` : ""}`} aria-label="Advanced search" title="Advanced search" className="grid h-[34px] w-[34px] place-items-center rounded-full text-accent-text hover:bg-accent-soft">
+          <Link href={`/search-advanced${q ? `?q=${encodeURIComponent(q)}` : ""}`} aria-label="Advanced search" title="Advanced search" className="grid h-[34px] w-[34px] place-items-center rounded-xl text-accent-text hover:bg-accent-soft">
             <SlidersHorizontal size={20} />
           </Link>
         </div>
@@ -134,7 +134,7 @@ export function SearchView() {
       </PageHeader>
       <ButtonTabs label="Search results" tabs={SEARCH_TABS.map((t) => ({ key: t.key, label: t.label }))} active={f} onChange={(k) => router.replace(`/search?q=${encodeURIComponent(q)}&f=${k}`, { scroll: false })} />
       {!q.trim() ? (
-        <EmptyState title="Search iSchoolie" body="Find people, hashtags, topics and posts. Try “#astronomy”, “from:prof_lindqvist”, or “robot filter:images”." />
+        <EmptyState title="Search iSchoolie" body="Find people, hashtags, interests and posts. Try “#astronomy”, “from:prof_lindqvist”, or “robot filter:images”." />
       ) : f === "user" ? (
         <PeopleList queryKey={["search", q, "user"]} path={`/search?q=${encodeURIComponent(q)}&f=user`} empty={`No results for “${q}”`} emptyBody="Try searching for something else, or check your spelling." />
       ) : (
@@ -221,8 +221,8 @@ export function AdvancedSearchView() {
         </label>
         <h2 className="px-4 pt-4 font-extrabold">Engagement</h2>
         {field("minReplies", "Minimum replies", undefined, "number")}
-        {field("minFaves", "Minimum likes", undefined, "number")}
-        {field("minReposts", "Minimum reposts", undefined, "number")}
+        {field("minFaves", "Minimum cheers", undefined, "number")}
+        {field("minReposts", "Minimum shares", undefined, "number")}
         <h2 className="px-4 pt-4 font-extrabold">Dates</h2>
         <div className="grid grid-cols-2">
           {field("since", "From", undefined, "date")}

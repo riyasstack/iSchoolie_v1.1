@@ -55,7 +55,7 @@ export function Menu({ trigger, children, align = "end", label }: { trigger: Rea
           sideOffset={4}
           collisionPadding={8}
           onClick={(e) => e.stopPropagation()}
-          className="motion-fade z-[70] min-w-[220px] max-w-[min(384px,calc(100vw-16px))] overflow-hidden rounded-md bg-elevated py-1 outline-none"
+          className="motion-fade z-[70] min-w-[220px] max-w-[min(384px,calc(100vw-16px))] overflow-hidden rounded-2xl border border-line bg-elevated p-1.5 outline-none"
           style={{ boxShadow: "var(--shadow)" }}
         >
           {children}
@@ -67,7 +67,7 @@ export function Menu({ trigger, children, align = "end", label }: { trigger: Rea
 
 export function MenuItem({ icon, children, onSelect, danger, disabled, href }: { icon?: ReactNode; children: ReactNode; onSelect?: () => void; danger?: boolean; disabled?: boolean; href?: string }) {
   const cls = clsx(
-    "flex min-h-[48px] cursor-pointer select-none items-center gap-3 px-4 py-3 text-post outline-none data-[highlighted]:bg-hover-strong data-[disabled]:cursor-default data-[disabled]:opacity-50",
+    "flex min-h-[42px] cursor-pointer select-none items-center gap-3 rounded-xl px-3 py-2.5 text-post outline-none data-[highlighted]:bg-hover-strong data-[disabled]:cursor-default data-[disabled]:opacity-50",
     danger && "text-danger",
   );
   if (href)
@@ -115,7 +115,7 @@ export function TextField({
   const over = max !== undefined && len > max;
   return (
     <div className="px-4 py-3">
-      <div className={clsx("rounded-[4px] border bg-transparent px-2 pt-1 transition-colors focus-within:border-accent-text", error || over ? "border-danger" : "border-line-strong")}>
+      <div className={clsx("rounded-xl border bg-transparent px-3 pt-1.5 transition-colors focus-within:border-accent-text", error || over ? "border-danger" : "border-line-strong")}>
         <div className="flex justify-between text-xs text-fg2">
           <label htmlFor={id}>{label}</label>
           {max !== undefined && (
@@ -183,18 +183,17 @@ export function Checkbox({ checked, onChange, label, description, disabled }: { 
 // ---------------------------------------------------------------- Tabs (route-based)
 export function RouteTabs({ tabs, active }: { tabs: { href: string; label: string; key: string }[]; active: string }) {
   return (
-    <nav className="flex border-b border-line" aria-label="Tabs">
+    <nav className="no-scrollbar flex gap-1 overflow-x-auto border-b border-line px-3 py-2" aria-label="Tabs">
       {tabs.map((t) => (
         <Link
           key={t.key}
           href={t.href}
           scroll={false}
           aria-current={t.key === active ? "page" : undefined}
-          className={clsx("flex min-h-[53px] flex-1 items-center justify-center px-3 text-post font-bold transition-colors hover:bg-accent-softer", t.key === active ? "text-accent-text" : "text-fg2")}
+          className={clsx("flex min-h-[38px] flex-1 items-center justify-center rounded-xl px-3 text-sm font-semibold transition-colors", t.key === active ? "bg-accent-soft text-accent-text" : "text-fg2 hover:bg-hover-strong hover:text-fg")}
         >
           <span className="relative flex h-full items-center whitespace-nowrap">
             {t.label}
-            {t.key === active && <span className="absolute inset-x-0 bottom-0 h-1 rounded-full bg-accent" />}
           </span>
         </Link>
       ))}
@@ -204,7 +203,7 @@ export function RouteTabs({ tabs, active }: { tabs: { href: string; label: strin
 
 export function ButtonTabs<K extends string>({ tabs, active, onChange, label }: { tabs: { key: K; label: string }[]; active: K; onChange: (k: K) => void; label: string }) {
   return (
-    <div role="tablist" aria-label={label} className="no-scrollbar flex overflow-x-auto border-b border-line">
+    <div role="tablist" aria-label={label} className="no-scrollbar flex gap-1 overflow-x-auto border-b border-line px-3 py-2">
       {tabs.map((t) => (
         <button
           key={t.key}
@@ -212,11 +211,10 @@ export function ButtonTabs<K extends string>({ tabs, active, onChange, label }: 
           role="tab"
           aria-selected={t.key === active}
           onClick={() => onChange(t.key)}
-          className={clsx("flex min-h-[53px] flex-1 items-center justify-center px-4 text-post font-bold hover:bg-accent-softer", t.key === active ? "text-accent-text" : "text-fg2")}
+          className={clsx("flex min-h-[38px] flex-1 items-center justify-center rounded-xl px-4 text-sm font-semibold transition-colors", t.key === active ? "bg-accent-soft text-accent-text" : "text-fg2 hover:bg-hover-strong hover:text-fg")}
         >
           <span className="relative flex h-full items-center whitespace-nowrap">
             {t.label}
-            {t.key === active && <span className="absolute inset-x-0 bottom-0 h-1 rounded-full bg-accent" />}
           </span>
         </button>
       ))}

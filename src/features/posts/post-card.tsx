@@ -4,8 +4,8 @@ import { useRouter } from "next/navigation";
 import { memo, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
 import clsx from "clsx";
 import {
-  MessageCircle, Repeat2, Heart, Upload, MoreHorizontal, Pin, Hash, Trash2, BarChart3, UserPlus, UserMinus, ListPlus,
-  VolumeX, Ban, Flag, BellOff, Bell, EyeOff, Eye, Pencil, Link2, Mail, Bookmark, BookmarkMinus, Share2, Lock,
+  MessageSquare, Share2, PartyPopper, Send, MoreHorizontal, Pin, Hash, Trash2, BarChart3, UserPlus, UserMinus, ListPlus,
+  VolumeX, Ban, Flag, BellOff, Bell, EyeOff, Eye, Pencil, Link2, Inbox, BookMarked, BookmarkMinus, ExternalLink, Lock,
 } from "lucide-react";
 import { Avatar, DisplayName, Menu, MenuItem } from "@/components/ui/misc";
 import { ConfirmDialog } from "@/components/ui/dialog";
@@ -47,15 +47,15 @@ function ContextRow({ context }: { context: EntryContext }) {
   let icon: ReactNode = null;
   let text: ReactNode = null;
   if (context.type === "repost") {
-    icon = <Repeat2 size={16} />;
+    icon = <Share2 size={14} />;
     text = (
       <Link href={`/${context.by.handle}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>
-        {context.by.displayName} Reposted
+        {context.by.displayName} shared
       </Link>
     );
   } else if (context.type === "pinned") {
     icon = <Pin size={14} />;
-    text = "Pinned Post";
+    text = "Pinned";
   } else if (context.type === "topic") {
     icon = <Hash size={14} />;
     text = (
@@ -64,19 +64,19 @@ function ContextRow({ context }: { context: EntryContext }) {
       </Link>
     );
   } else if (context.type === "liked") {
-    icon = <Heart size={14} fill="currentColor" />;
+    icon = <PartyPopper size={14} />;
     text = (
       <Link href={`/${context.by.handle}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>
-        {context.by.displayName} liked
+        {context.by.displayName} cheered
       </Link>
     );
   } else if (context.type === "follows_reply") {
-    icon = <MessageCircle size={14} />;
+    icon = <MessageSquare size={14} />;
     text = `${context.by.displayName} replied`;
   }
   return (
-    <div className="-mb-1 flex items-center gap-3 pt-2 text-xs font-bold text-fg2">
-      <div className="flex w-12 shrink-0 justify-end">{icon}</div>
+    <div className="-mb-1 flex items-center gap-2 pt-3 text-xs font-semibold text-fg2">
+      <span className="grid h-5 w-5 place-items-center rounded-md bg-subtle">{icon}</span>
       <div className="min-w-0 truncate">{text}</div>
     </div>
   );
@@ -121,7 +121,7 @@ function PostCardBody({ p, context, connectTop, connectBottom, showReplyingTo }:
   if (p.viewer.authorMuted && !showHidden && context?.type !== "pinned") {
     // Muted authors collapse in conversations; they're already filtered from feeds.
     return (
-      <div className="border-b border-line px-4 py-3 text-fg2">
+      <div className="mx-3 mt-3 rounded-2xl border border-line bg-bg px-4 py-3 text-fg2">
         This post is from an account you muted.{" "}
         <button type="button" className="text-accent-text hover:underline" onClick={() => setShowHidden(true)}>
           View
@@ -136,7 +136,11 @@ function PostCardBody({ p, context, connectTop, connectBottom, showReplyingTo }:
       aria-label={`Post by ${p.author.displayName}`}
       onClick={open}
       onKeyDown={(e) => e.key === "Enter" && e.target === e.currentTarget && open(e)}
-      className={clsx("post-card cursor-pointer px-4 outline-none transition-colors duration-150 hover:bg-hover focus-visible:bg-hover", !connectBottom && "border-b border-line")}
+      className={clsx(
+        "post-card mx-3 cursor-pointer border-x border-line bg-bg px-4 outline-none transition-[background-color,border-color,box-shadow] duration-150 hover:border-line-strong focus-visible:border-accent-text",
+        !connectTop && "mt-3 rounded-t-2xl border-t",
+        !connectBottom && "rounded-b-2xl border-b shadow-card",
+      )}
     >
       {context && <ContextRow context={context} />}
       <div className="flex gap-3">
@@ -256,7 +260,7 @@ function PollView({ p }: { p: PostDTO }) {
                 type="button"
                 disabled={vote.isPending}
                 onClick={() => vote.mutate({ id: p.id, optionId: o.id })}
-                className="flex min-h-[34px] w-full items-center justify-center rounded-full border border-accent px-4 font-bold text-accent-text hover:bg-accent-soft"
+                className="flex min-h-[34px] w-full items-center justify-center rounded-xl border border-accent px-4 font-semibold text-accent-text hover:bg-accent-soft"
               >
                 {o.label}
               </button>
@@ -327,17 +331,26 @@ export function QuotedPost({ quoted }: { quoted: PostDTO | UnavailableDTO }) {
 }
 
 // ---------------------------------------------------------------------- actions
-function ActionButton({ label, count, icon, onClick, tone, active, disabled, title, children }: { label: string; count?: number; icon: ReactNode; onClick?: () => void; tone: "accent" | "repost" | "like"; active?: boolean; disabled?: boolean; title?: string; children?: ReactNode }) {
-  const hover = tone === "accent" ? "group-hover:bg-accent-soft group-hover:text-accent-text" : tone === "repost" ? "group-hover:bg-repost-soft group-hover:text-repost" : "group-hover:bg-like-soft group-hover:text-like";
-  const textHover = tone === "accent" ? "group-hover:text-accent-text" : tone === "repost" ? "group-hover:text-repost" : "group-hover:text-like";
-  const activeCls = active ? (tone === "repost" ? "text-repost" : tone === "like" ? "text-like" : "text-accent-text") : "text-fg2";
-  const content = (
+type ChipTone = "accent" | "repost" | "like";
+
+/** Classes for a labelled action chip under a post. */
+export function chipClass(tone: ChipTone, active?: boolean, disabled?: boolean) {
+  const hover = tone === "accent" ? "enabled:hover:bg-accent-soft enabled:hover:text-accent-text" : tone === "repost" ? "enabled:hover:bg-repost-soft enabled:hover:text-repost" : "enabled:hover:bg-like-soft enabled:hover:text-like";
+  const activeCls = active ? (tone === "repost" ? "bg-repost-soft text-repost" : tone === "like" ? "bg-like-soft text-like" : "bg-accent-soft text-accent-text") : "text-fg2";
+  return clsx("flex h-8 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium transition-colors disabled:opacity-50", !disabled && hover, activeCls);
+}
+
+function ChipContent({ icon, text, count, large }: { icon: ReactNode; text: string; count?: number; large?: boolean }) {
+  return (
     <>
-      <span className={clsx("-m-2 grid h-[34.75px] w-[34.75px] place-items-center rounded-full transition-colors", !disabled && hover)}>{icon}</span>
-      {count !== undefined && <span className={clsx("min-w-[1ch] px-3 text-xs tabular-nums", !disabled && textHover)}>{count > 0 ? compactCount(count) : ""}</span>}
+      {icon}
+      <span className={large ? "inline" : "hidden sm:inline"}>{text}</span>
+      {count !== undefined && count > 0 && <span className="tabular-nums">{compactCount(count)}</span>}
     </>
   );
-  if (children) return children;
+}
+
+function ActionButton({ label, count, icon, text, onClick, tone, active, disabled, title, large }: { label: string; count?: number; icon: ReactNode; text: string; onClick?: () => void; tone: ChipTone; active?: boolean; disabled?: boolean; title?: string; large?: boolean }) {
   return (
     <button
       type="button"
@@ -349,9 +362,9 @@ function ActionButton({ label, count, icon, onClick, tone, active, disabled, tit
         e.stopPropagation();
         onClick?.();
       }}
-      className={clsx("group flex min-h-[32px] items-center disabled:opacity-50", activeCls)}
+      className={chipClass(tone, active, disabled)}
     >
-      {content}
+      <ChipContent icon={icon} text={text} count={count} large={large} />
     </button>
   );
 }
@@ -363,7 +376,7 @@ export function PostActions({ p, large }: { p: PostDTO; large?: boolean }) {
   const bookmark = useToggle("bookmark");
   const dialogs = useDialogs();
   const toast = useToast();
-  const size = large ? 22.5 : 18.75;
+  const size = large ? 19 : 17;
   const [pop, setPop] = useState(false);
   const repostDisabled = p.author.isProtected;
   const copy = async () => {
@@ -376,97 +389,93 @@ export function PostActions({ p, large }: { p: PostDTO; large?: boolean }) {
     }
   };
   return (
-    <GuestGate action="reply, repost and like posts">
-    <div className={clsx("flex items-center", large ? "justify-around border-t border-line py-1" : "mt-3 max-w-[425px] justify-between")} role="group" aria-label="Post actions">
+    <GuestGate action="reply, share and cheer posts">
+    <div className={clsx("flex flex-wrap items-center gap-1", large ? "border-t border-line py-2" : "-ml-2.5 mt-2.5")} role="group" aria-label="Post actions">
       <ActionButton
         label={p.viewer.canReply ? `Reply${p.counts.replies ? `, ${p.counts.replies} replies` : ""}` : p.viewer.replyRestriction ?? "Replies are limited"}
         title={p.viewer.canReply ? "Reply" : p.viewer.replyRestriction ?? "Replies are limited"}
         count={large ? undefined : p.counts.replies}
+        text="Reply"
+        large={large}
         tone="accent"
         disabled={!p.viewer.canReply}
-        icon={<MessageCircle size={size} />}
+        icon={<MessageSquare size={size} />}
         onClick={() => router.push(`/compose/post?reply=${p.id}`)}
       />
       <Menu
-        label={p.viewer.reposted ? "Undo repost" : "Repost"}
+        label={p.viewer.reposted ? "Undo share" : "Share"}
         align="center"
         trigger={
           <button
             type="button"
-            aria-label={repostDisabled ? "Posts from protected accounts can’t be reposted" : `${p.viewer.reposted ? "Undo repost" : "Repost"}${p.counts.reposts + p.counts.quotes ? `, ${p.counts.reposts + p.counts.quotes} reposts` : ""}`}
-            title={repostDisabled ? "Posts from protected accounts can’t be reposted" : "Repost"}
+            aria-label={repostDisabled ? "Posts from protected accounts can’t be shared" : `${p.viewer.reposted ? "Undo share" : "Share"}${p.counts.reposts + p.counts.quotes ? `, ${p.counts.reposts + p.counts.quotes} shares` : ""}`}
+            title={repostDisabled ? "Posts from protected accounts can’t be shared" : "Share"}
             disabled={repostDisabled && !p.viewer.isAuthor}
             onClick={(e) => e.stopPropagation()}
-            className={clsx("group flex min-h-[32px] items-center disabled:opacity-50", p.viewer.reposted ? "text-repost" : "text-fg2")}
+            className={chipClass("repost", p.viewer.reposted, repostDisabled && !p.viewer.isAuthor)}
           >
-            <span className="-m-2 grid h-[34.75px] w-[34.75px] place-items-center rounded-full transition-colors group-enabled:group-hover:bg-repost-soft group-enabled:group-hover:text-repost">
-              {repostDisabled ? <Lock size={size - 2} /> : <Repeat2 size={size} />}
-            </span>
-            {!large && <span className="min-w-[1ch] px-3 text-xs tabular-nums group-enabled:group-hover:text-repost">{p.counts.reposts + p.counts.quotes > 0 ? compactCount(p.counts.reposts + p.counts.quotes) : ""}</span>}
+            <ChipContent icon={repostDisabled ? <Lock size={size - 2} /> : <Share2 size={size} />} text={p.viewer.reposted ? "Shared" : "Share"} count={large ? undefined : p.counts.reposts + p.counts.quotes} large={large} />
           </button>
         }
       >
         {repostDisabled ? (
           <MenuItem icon={<Lock />} disabled>
-            Protected posts can’t be reposted
+            Protected posts can’t be shared
           </MenuItem>
         ) : (
-          <MenuItem icon={<Repeat2 />} onSelect={() => repost.mutate({ id: p.id, on: !p.viewer.reposted })}>
-            {p.viewer.reposted ? "Undo Repost" : "Repost"}
+          <MenuItem icon={<Share2 />} onSelect={() => repost.mutate({ id: p.id, on: !p.viewer.reposted })}>
+            {p.viewer.reposted ? "Undo share" : "Share to your followers"}
           </MenuItem>
         )}
         <MenuItem icon={<Pencil />} onSelect={() => router.push(`/compose/post?quote=${p.id}`)}>
-          Quote Post
+          Share with a note
         </MenuItem>
       </Menu>
       <ActionButton
-        label={`${p.viewer.liked ? "Unlike" : "Like"}${p.counts.likes ? `, ${p.counts.likes} likes` : ""}`}
-        title={p.viewer.liked ? "Unlike" : "Like"}
+        label={`${p.viewer.liked ? "Remove cheer" : "Cheer"}${p.counts.likes ? `, ${p.counts.likes} cheers` : ""}`}
+        title={p.viewer.liked ? "Remove cheer" : "Cheer"}
         count={large ? undefined : p.counts.likes}
+        text={p.viewer.liked ? "Cheered" : "Cheer"}
+        large={large}
         tone="like"
         active={p.viewer.liked}
-        icon={<Heart size={size} fill={p.viewer.liked ? "currentColor" : "none"} className={pop ? "like-pop" : undefined} onAnimationEnd={() => setPop(false)} />}
+        icon={<PartyPopper size={size} className={pop ? "like-pop" : undefined} onAnimationEnd={() => setPop(false)} />}
         onClick={() => {
           if (!p.viewer.liked) setPop(true);
           like.mutate({ id: p.id, on: !p.viewer.liked });
         }}
       />
       <Menu
-        label="Share"
+        label="Send"
         trigger={
-          <button type="button" data-guest-ok="" aria-label="Share post" title="Share" onClick={(e) => e.stopPropagation()} className={clsx("group flex min-h-[32px] items-center", p.viewer.bookmarked ? "text-accent-text" : "text-fg2")}>
-            <span className="-m-2 grid h-[34.75px] w-[34.75px] place-items-center rounded-full transition-colors group-hover:bg-accent-soft group-hover:text-accent-text">
-              <Upload size={size} />
-            </span>
-            {!large && <span className="px-3" />}
+          <button type="button" data-guest-ok="" aria-label="Send post" title="Send or save" onClick={(e) => e.stopPropagation()} className={clsx(chipClass("accent", p.viewer.bookmarked), "ml-auto")}>
+            <ChipContent icon={<Send size={size} />} text={p.viewer.bookmarked ? "Saved" : "Send"} large={large} />
           </button>
         }
       >
-        <MenuItem icon={<Mail />} onSelect={() => dialogs.shareByMessage(p.id)}>
-          Send via Direct Message
+        <MenuItem icon={<Inbox />} onSelect={() => dialogs.shareByMessage(p.id)}>
+          Send in Inbox
         </MenuItem>
-        <MenuItem icon={p.viewer.bookmarked ? <BookmarkMinus /> : <Bookmark />} onSelect={() => bookmark.mutate({ id: p.id, on: !p.viewer.bookmarked })}>
-          {p.viewer.bookmarked ? "Remove Post from Bookmarks" : "Add Post to Bookmarks"}
+        <MenuItem icon={p.viewer.bookmarked ? <BookmarkMinus /> : <BookMarked />} onSelect={() => bookmark.mutate({ id: p.id, on: !p.viewer.bookmarked })}>
+          {p.viewer.bookmarked ? "Remove from Saved" : "Save post"}
         </MenuItem>
         <MenuItem icon={<Link2 />} onSelect={copy}>
-          Copy link to Post
+          Copy link
         </MenuItem>
         {typeof navigator !== "undefined" && "share" in navigator && (
           <MenuItem
-            icon={<Share2 />}
+            icon={<ExternalLink />}
             onSelect={() => {
               navigator.share({ url: `${window.location.origin}${postPath(p)}`, text: `Post by @${p.author.handle}` }).catch(() => {});
             }}
           >
-            Share Post via…
+            Share outside iSchoolie…
           </MenuItem>
         )}
       </Menu>
       {large && p.viewer.isAuthor && (
-        <button type="button" aria-label="View post activity" title="View post activity" onClick={(e) => { e.stopPropagation(); dialogs.activity(p.id); }} className="group flex min-h-[32px] items-center text-fg2">
-          <span className="-m-2 grid h-[34.75px] w-[34.75px] place-items-center rounded-full group-hover:bg-accent-soft group-hover:text-accent-text">
-            <BarChart3 size={size} />
-          </span>
+        <button type="button" aria-label="View post activity" title="View post activity" onClick={(e) => { e.stopPropagation(); dialogs.activity(p.id); }} className={chipClass("accent")}>
+          <ChipContent icon={<BarChart3 size={size} />} text="Activity" large />
         </button>
       )}
     </div>
@@ -505,7 +514,7 @@ export function PostMenu({ p }: { p: PostDTO }) {
   );
   const muteConv = usePostAction(
     (on: boolean) => (on ? put<PostDTO>(`/posts/${p.id}/mute-conversation`) : del<PostDTO>(`/posts/${p.id}/mute-conversation`)),
-    (_x, on) => toast({ text: on ? "You won’t get notifications from this conversation." : "Conversation unmuted." }),
+    (_x, on) => toast({ text: on ? "You won’t get alerts from this conversation." : "Conversation unmuted." }),
   );
   const relationship = async (path: string, method: "PUT" | "DELETE", msg: string) => {
     try {
@@ -524,7 +533,7 @@ export function PostMenu({ p }: { p: PostDTO }) {
       <Menu
         label="More"
         trigger={
-          <button type="button" aria-label="More" title="More" onClick={(e) => e.stopPropagation()} className="-mr-2 -mt-1 grid h-[34.75px] w-[34.75px] shrink-0 place-items-center rounded-full text-fg2 hover:bg-accent-soft hover:text-accent-text">
+          <button type="button" aria-label="More" title="More" onClick={(e) => e.stopPropagation()} className="-mr-2 -mt-1 grid h-[34.75px] w-[34.75px] shrink-0 place-items-center rounded-xl text-fg2 hover:bg-accent-soft hover:text-accent-text">
             <MoreHorizontal size={18.75} />
           </button>
         }
@@ -592,7 +601,7 @@ export function PostMenu({ p }: { p: PostDTO }) {
         open={confirmBlock}
         onOpenChange={setConfirmBlock}
         title={`Block @${h}?`}
-        body={`They will not be able to follow you or view your posts, and you will not see posts or notifications from @${h}.`}
+        body={`They will not be able to follow you or view your posts, and you will not see posts or alerts from @${h}.`}
         confirmLabel="Block"
         danger
         onConfirm={() => {
@@ -610,7 +619,7 @@ export function FocalPost({ p }: { p: PostDTO }) {
   const replyAudienceNote =
     p.replyAudience === "FOLLOWING" ? `People @${p.author.handle} follows or mentioned can reply` : p.replyAudience === "MENTIONED" ? `People @${p.author.handle} mentioned can reply` : null;
   return (
-    <article data-post-id={p.id} aria-label={`Post by ${p.author.displayName}`} className="border-b border-line px-4 pt-3">
+    <article data-post-id={p.id} aria-label={`Post by ${p.author.displayName}`} className="mx-3 mt-3 rounded-2xl border border-line bg-bg px-4 pt-4 shadow-card">
       <div className="flex items-start gap-3">
         <ProfileHoverCard handle={p.author.handle}>
           <Link href={`/${p.author.handle}`} aria-label={`${p.author.displayName} profile`}>
@@ -640,25 +649,24 @@ export function FocalPost({ p }: { p: PostDTO }) {
       <div className="my-4 text-fg2">
         <Link href={`/${p.author.handle}/status/${p.id}`} className="hover:underline">
           <time dateTime={p.createdAt}>{fullTime(p.createdAt)}</time>
-        </Link>{" "}
-        · iSchoolie Web App
+        </Link>
       </div>
-      {replyAudienceNote && <div className="-mt-2 mb-3 flex items-center gap-1 text-sm text-fg2"><MessageCircle size={14} /> {replyAudienceNote}</div>}
+      {replyAudienceNote && <div className="-mt-2 mb-3 flex items-center gap-1 text-sm text-fg2"><MessageSquare size={14} /> {replyAudienceNote}</div>}
       {(p.counts.reposts > 0 || p.counts.quotes > 0 || p.counts.likes > 0) && (
         <div className="flex flex-wrap gap-x-5 gap-y-1 border-t border-line py-4">
           {p.counts.reposts > 0 && (
             <Link href={`/${p.author.handle}/status/${p.id}/reposts`} className="hover:underline">
-              <b>{compactCount(p.counts.reposts)}</b> <span className="text-fg2">Repost{p.counts.reposts === 1 ? "" : "s"}</span>
+              <b>{compactCount(p.counts.reposts)}</b> <span className="text-fg2">Share{p.counts.reposts === 1 ? "" : "s"}</span>
             </Link>
           )}
           {p.counts.quotes > 0 && (
             <Link href={`/${p.author.handle}/status/${p.id}/quotes`} className="hover:underline">
-              <b>{compactCount(p.counts.quotes)}</b> <span className="text-fg2">Quote Post{p.counts.quotes === 1 ? "" : "s"}</span>
+              <b>{compactCount(p.counts.quotes)}</b> <span className="text-fg2">Quote share{p.counts.quotes === 1 ? "" : "s"}</span>
             </Link>
           )}
           {p.counts.likes > 0 && (
             <Link href={`/${p.author.handle}/status/${p.id}/likes`} className="hover:underline">
-              <b>{compactCount(p.counts.likes)}</b> <span className="text-fg2">Like{p.counts.likes === 1 ? "" : "s"}</span>
+              <b>{compactCount(p.counts.likes)}</b> <span className="text-fg2">Cheer{p.counts.likes === 1 ? "" : "s"}</span>
             </Link>
           )}
         </div>

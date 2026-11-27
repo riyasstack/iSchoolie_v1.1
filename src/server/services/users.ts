@@ -105,7 +105,7 @@ export async function unfollow(ctx: RequestContext, handle: string) {
 export async function setProfileNotify(ctx: RequestContext, handle: string, on: boolean) {
   const target = await findByHandle(ctx, handle);
   const r = await prisma.follow.updateMany({ where: { workspaceId: ctx.workspace.id, followerId: ctx.actor.id, followeeId: target.id }, data: { notify: on } });
-  if (!r.count) throw invalid("Follow this account to get notifications for its posts.");
+  if (!r.count) throw invalid("Follow this account to get alerts for its posts.");
   return getProfile(ctx, handle);
 }
 

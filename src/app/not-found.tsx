@@ -7,8 +7,8 @@ export default function NotFound() {
       <h1 className="text-display font-extrabold">This page doesn’t exist</h1>
       <p className="text-fg2">Try searching for something else, or head back home.</p>
       <div className="flex gap-3">
-        <Link href="/home" className="rounded-full bg-accent px-6 py-2.5 font-bold text-accent-on">Go home</Link>
-        <Link href="/explore" className="rounded-full border border-line-strong px-6 py-2.5 font-bold">Search</Link>
+        <Link href="/home" className="rounded-xl bg-accent px-6 py-2.5 font-semibold text-accent-on">Go home</Link>
+        <Link href="/explore" className="rounded-xl border border-line-strong px-6 py-2.5 font-semibold">Search</Link>
       </div>
     </main>
   );

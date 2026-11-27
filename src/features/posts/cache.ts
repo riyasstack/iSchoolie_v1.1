@@ -94,7 +94,7 @@ export function useToggle(kind: Toggle) {
       qc.setQueryData(postKey(p.id), p);
       if (kind === "bookmark") {
         qc.invalidateQueries({ queryKey: ["bookmarks"] });
-        toast({ text: on ? "Post added to your Bookmarks" : "Post removed from your Bookmarks", action: on ? { label: "View", href: "/i/bookmarks" } : undefined });
+        toast({ text: on ? "Saved to your library" : "Removed from Saved", action: on ? { label: "View", href: "/i/bookmarks" } : undefined });
       }
       if (kind === "repost") qc.invalidateQueries({ queryKey: ["profile-timeline"] });
       if (kind === "like") qc.invalidateQueries({ queryKey: ["profile-timeline"], predicate: (q) => q.queryKey[2] === "likes" });

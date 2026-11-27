@@ -25,9 +25,9 @@ const nextConfig: NextConfig = {
   // graph, so serverless bundles must include it explicitly.
   // (Keys are route globs: "[...path]" would be read as a character class, so match all
   // API routes instead.)
-  outputFileTracingIncludes: {
-    "/api/**": ["./assets/seed/**/*"],
-  },
+  // Production builds only: in `next dev` this setting made the dev server reload every page
+  // after each request.
+  ...(process.env.NODE_ENV === "production" ? { outputFileTracingIncludes: { "/api/**": ["./assets/seed/**/*"] } } : {}),
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

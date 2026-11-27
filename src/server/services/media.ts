@@ -71,7 +71,7 @@ export async function upload(
   if (!type) throw new AppError("UNSUPPORTED_MEDIA", "Unsupported file. Use JPEG, PNG, WebP, GIF, MP4 or WebM.");
   if (type.kind === "IMAGE" && buf.length > LIMITS.IMAGE) throw new AppError("PAYLOAD_TOO_LARGE", "Images must be 5 MB or smaller.");
   if (type.kind === "GIF" && buf.length > LIMITS.GIF) throw new AppError("PAYLOAD_TOO_LARGE", "GIFs must be 15 MB or smaller.");
-  if (scope !== "POST" && scope !== "MESSAGE" && type.kind !== "IMAGE") throw invalid("Profile, list and Moment images must be JPEG, PNG or WebP.");
+  if (scope !== "POST" && scope !== "MESSAGE" && type.kind !== "IMAGE") throw invalid("Profile, circle and story images must be JPEG, PNG or WebP.");
 
   const id = crypto.randomUUID().replace(/-/g, "");
   const base = `ws/${ctx.workspace.id}/${id}`;

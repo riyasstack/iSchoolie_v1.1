@@ -1,31 +1,49 @@
 /**
- * Navigation icons. Line icons at ~1.75 stroke to match the 2020 optical weight;
- * active destinations use a filled variant (where the shape allows) plus bold labels.
+ * Campus Cards navigation icons: rounded line icons; the active space gets a heavier stroke
+ * (its pill background and label carry the rest of the emphasis).
  */
-import { Home, Hash, Bell, Mail, Bookmark, ScrollText, User, CircleEllipsis, Search, Settings, Zap, MessageSquareText, Feather, type LucideIcon } from "lucide-react";
+import {
+  LayoutDashboard, Compass, Bell, Inbox, BookMarked, Users, UserRound, CircleEllipsis, Search, Settings, BookOpen, Shapes, PenLine,
+  type LucideIcon,
+} from "lucide-react";
 
 export type NavKey = "home" | "explore" | "notifications" | "messages" | "bookmarks" | "lists" | "profile" | "more" | "search" | "settings" | "moments" | "topics";
 
 const ICONS: Record<NavKey, LucideIcon> = {
-  home: Home,
-  explore: Hash,
+  home: LayoutDashboard,
+  explore: Compass,
   notifications: Bell,
-  messages: Mail,
-  bookmarks: Bookmark,
-  lists: ScrollText,
-  profile: User,
+  messages: Inbox,
+  bookmarks: BookMarked,
+  lists: Users,
+  profile: UserRound,
   more: CircleEllipsis,
   search: Search,
   settings: Settings,
-  moments: Zap,
-  topics: MessageSquareText,
+  moments: BookOpen,
+  topics: Shapes,
 };
 
-const FILLABLE = new Set<NavKey>(["home", "notifications", "bookmarks", "profile", "messages"]);
+/** Display names for each space (iSchoolie's own vocabulary). */
+export const SPACE_LABELS: Record<NavKey, string> = {
+  home: "Feed",
+  explore: "Discover",
+  notifications: "Alerts",
+  messages: "Inbox",
+  bookmarks: "Saved",
+  lists: "Circles",
+  profile: "Profile",
+  more: "More",
+  search: "Search",
+  settings: "Settings",
+  moments: "Stories",
+  topics: "Interests",
+};
 
-export function NavIcon({ name, active, size = 26 }: { name: NavKey; active?: boolean; size?: number }) {
+export function NavIcon({ name, active, size = 22 }: { name: NavKey; active?: boolean; size?: number }) {
   const I = ICONS[name];
-  return <I size={size} strokeWidth={active ? 2.4 : 1.75} fill={active && FILLABLE.has(name) ? "currentColor" : "none"} className={active && name === "messages" ? "[&>path]:stroke-[var(--bg)]" : undefined} aria-hidden="true" />;
+  return <I size={size} strokeWidth={active ? 2.4 : 1.9} aria-hidden="true" />;
 }
 
-export { Feather };
+/** Compose icon. */
+export { PenLine as ComposeIcon };
