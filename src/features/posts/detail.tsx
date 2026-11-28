@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { EyeOff } from "lucide-react";
 import { PageHeader } from "@/components/layout/app-shell";
@@ -9,45 +9,50 @@ import { EmptyState, ErrorState, LoadMore, RouteTabs } from "@/components/ui/mis
 import { PostSkeleton, UserSkeleton, Spinner } from "@/components/ui/spinner";
 import { get, errorMessage, ApiError } from "@/lib/api";
 import { FocalPost, PostCard, UnavailablePost, postPath } from "./post-card";
-import { isPost, seedPosts, usePost } from "./cache";
+import { isPost, postKey, usePost, type AnyPost } from "./cache";
+import { detailQuery } from "./detail-query";
 import type { PostDTO } from "@/lib/types";
 import { Timeline } from "../timeline/timeline";
 import { UserCell } from "../profiles/people";
 import { Composer } from "../compose/composer";
-import type { PostDetailDTO, UserListItem, AnyPostDTO } from "./detail-types";
+import type { UserListItem, AnyPostDTO } from "./detail-types";
 import type { UnavailableDTO } from "@/lib/types";
 
 export function PostDetailView({ id, handle, hidden = false }: { id: string; handle: string; hidden?: boolean }) {
   const qc = useQueryClient();
   const router = useRouter();
   const focalRef = useRef<HTMLDivElement>(null);
-  const q = useInfiniteQuery({
-    queryKey: ["detail", id, hidden],
-    initialPageParam: null as string | null,
-    queryFn: async ({ pageParam }) => {
-      const d = await get<PostDetailDTO>(`/posts/${id}/detail?${hidden ? "hidden=1&" : ""}${pageParam ? `cursor=${pageParam}` : ""}`);
-      seedPosts(qc, [d.focal, ...d.ancestors, ...d.replies]);
-      return d;
-    },
-    getNextPageParam: (last) => last.nextCursor,
-  });
+  const q = useInfiniteQuery(detailQuery(qc, id, hidden));
   const first = q.data?.pages[0];
   // Canonicalise the handle in the URL (e.g. after a rename or a mistyped handle).
   useEffect(() => {
     if (first && isPost(first.focal) && first.focal.author.handle !== handle && !hidden) router.replace(postPath(first.focal));
   }, [first, handle, hidden, router]);
-  // Keep the focal post in view when ancestors render above it.
-  useEffect(() => {
+  // Keep the focal post in view when ancestors render above it (before paint, so it never jumps).
+  useLayoutEffect(() => {
     if (first && first.ancestors.length && focalRef.current && !hidden) focalRef.current.scrollIntoView({ block: "start" });
   }, [first, hidden]);
 
-  if (q.isPending)
+  if (q.isPending) {
+    // Opened from a feed: the post is already cached, so show it at once and load the rest.
+    const cached = hidden ? undefined : qc.getQueryData<AnyPost>(postKey(id));
+    if (isPost(cached))
+      return (
+        <div>
+          <PageHeader title="Post" back />
+          <div key="focal" ref={focalRef} className="scroll-mt-[53px]">
+            <CachedFocalPost initial={cached} />
+          </div>
+          <PostSkeleton count={2} />
+        </div>
+      );
     return (
       <div>
         <PageHeader title={hidden ? "Hidden replies" : "Post"} back />
         <PostSkeleton count={3} />
       </div>
     );
+  }
   if (q.isError) {
     const e = q.error;
     return (
@@ -85,7 +90,7 @@ export function PostDetailView({ id, handle, hidden = false }: { id: string; han
     <div>
       <PageHeader title="Post" back />
       {d.ancestors.map((a) => (isPost(a) ? <PostCard key={a.id} postId={a.id} connectBottom showReplyingTo={false} /> : <div key={a.id} className="pb-1"><UnavailablePost reason={a.unavailable} /></div>))}
-      <div ref={focalRef} className="scroll-mt-[53px]">
+      <div key="focal" ref={focalRef} className="scroll-mt-[53px]">
         <CachedFocalPost initial={focal} />
       </div>
       {focal.viewer.canReply ? (

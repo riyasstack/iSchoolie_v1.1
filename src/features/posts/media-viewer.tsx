@@ -46,7 +46,7 @@ export function MediaViewer({ id, n, kind, asModal }: { id: string; n: number; k
   return (
     <R.Root open onOpenChange={(o) => !o && close()}>
       <R.Portal>
-        <R.Overlay className="fixed inset-0 z-[90] bg-[var(--media-overlay)]" />
+        <R.Overlay className="motion-fade fixed inset-0 z-[90] bg-[var(--media-overlay)]" />
         <R.Content aria-describedby={undefined} className="fixed inset-0 z-[90] flex flex-col outline-none">
           <R.Title className="sr-only">{media?.alt ? `Image: ${media.alt}` : "Media viewer"}</R.Title>
           <div className="flex items-center justify-between p-3">
@@ -60,10 +60,10 @@ export function MediaViewer({ id, n, kind, asModal }: { id: string; n: number; k
             {(isError || (data && !p)) && <div className="max-w-md"><UnavailablePost reason={data && !isPost(data) ? data.unavailable : "not_found"} /></div>}
             {p && !media && <p className="text-white">This media isn’t available.</p>}
             {media && (media.kind === "VIDEO" ? (
-              <div className="w-full max-w-[min(1000px,100%)]"><VideoPlayer media={media} large /></div>
+              <div key={media.id} className="viewer-zoom w-full max-w-[min(1000px,100%)]"><VideoPlayer media={media} large /></div>
             ) : (
                
-              <img src={media.url} alt={media.alt} className="max-h-full max-w-full select-none object-contain" draggable={false} />
+              <img key={media.id} src={media.url} alt={media.alt} className="viewer-zoom max-h-full max-w-full select-none object-contain" draggable={false} />
             ))}
             {index > 0 && (
               <button type="button" aria-label="Previous image" onClick={() => go(-1)} className="absolute left-3 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-xl bg-black/50 text-white hover:bg-black/70">

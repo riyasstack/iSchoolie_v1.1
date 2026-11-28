@@ -3,9 +3,12 @@ import Link from "next/link";
 import clsx from "clsx";
 import { DropdownMenu as DM } from "radix-ui";
 import { useEffect, useId, useRef, useState, type ReactNode, type InputHTMLAttributes, type TextareaHTMLAttributes } from "react";
+import { createPortal } from "react-dom";
 import { BadgeCheck, Lock } from "lucide-react";
 import { Button } from "./button";
 import { Spinner } from "./spinner";
+import { useGlide } from "./glide";
+import { useIsPhone } from "./use-phone";
 import type { UserDTO } from "@/lib/types";
 import { graphemeLength } from "@/lib/text";
 
@@ -43,19 +46,51 @@ export function DisplayName({ user, className }: { user: Pick<UserDTO, "displayN
 }
 
 // ---------------------------------------------------------------- Menu
+/**
+ * Dropdown menu. On desktop it grows out of its button; on phones it rises as a bottom
+ * sheet over a shade (the shade swallows the tap that closes it, so nothing underneath fires).
+ */
 export function Menu({ trigger, children, align = "end", label }: { trigger: ReactNode; children: ReactNode; align?: "start" | "end" | "center"; label?: string }) {
+  const phone = useIsPhone();
+  const [open, setOpen] = useState(false);
+  const [shade, setShade] = useState(false);
+  const shadeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onOpenChange = (o: boolean) => {
+    setOpen(o);
+    if (shadeTimer.current) clearTimeout(shadeTimer.current);
+    if (o) setShade(true);
+    else shadeTimer.current = setTimeout(() => setShade(false), 240);
+  };
+  useEffect(() => () => {
+    if (shadeTimer.current) clearTimeout(shadeTimer.current);
+  }, []);
   return (
-    <DM.Root modal={false}>
+    <DM.Root modal={false} open={open} onOpenChange={onOpenChange}>
       <DM.Trigger asChild aria-label={label}>
         {trigger}
       </DM.Trigger>
+      {phone &&
+        shade &&
+        createPortal(
+          <div
+            aria-hidden="true"
+            className="menu-shade"
+            data-state={open ? "open" : "closed"}
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              onOpenChange(false);
+            }}
+          />,
+          document.body,
+        )}
       <DM.Portal>
         <DM.Content
           align={align}
           sideOffset={4}
           collisionPadding={8}
           onClick={(e) => e.stopPropagation()}
-          className="motion-fade z-[70] min-w-[220px] max-w-[min(384px,calc(100vw-16px))] overflow-hidden rounded-2xl border border-line bg-elevated p-1.5 outline-none"
+          className="menu-pop z-[70] min-w-[220px] max-w-[min(384px,calc(100vw-16px))] overflow-hidden rounded-2xl border border-line bg-elevated p-1.5 outline-none"
           style={{ boxShadow: "var(--shadow)" }}
         >
           {children}
@@ -182,15 +217,19 @@ export function Checkbox({ checked, onChange, label, description, disabled }: { 
 
 // ---------------------------------------------------------------- Tabs (route-based)
 export function RouteTabs({ tabs, active }: { tabs: { href: string; label: string; key: string }[]; active: string }) {
+  // Each route renders its own tab bar, so the pill remembers where it was to glide across.
+  const glide = useGlide<HTMLElement>(active, { className: "rounded-xl bg-accent-soft", memory: `route-tabs:${tabs.map((t) => t.key).join("|")}` });
   return (
-    <nav className="no-scrollbar flex gap-1 overflow-x-auto border-b border-line px-3 py-2" aria-label="Tabs">
+    <nav ref={glide.ref} className="no-scrollbar relative flex gap-1 overflow-x-auto border-b border-line px-3 py-2" aria-label="Tabs">
+      {glide.pill}
       {tabs.map((t) => (
         <Link
           key={t.key}
           href={t.href}
           scroll={false}
+          data-glide={t.key}
           aria-current={t.key === active ? "page" : undefined}
-          className={clsx("flex min-h-[38px] flex-1 items-center justify-center rounded-xl px-3 text-sm font-semibold transition-colors", t.key === active ? "bg-accent-soft text-accent-text" : "text-fg2 hover:bg-hover-strong hover:text-fg")}
+          className={clsx("press relative z-[1] flex min-h-[38px] flex-1 items-center justify-center rounded-xl px-3 text-sm font-semibold", t.key === active ? "text-accent-text" : "text-fg2 hover:bg-hover-strong hover:text-fg")}
         >
           <span className="relative flex h-full items-center whitespace-nowrap">
             {t.label}
@@ -202,16 +241,19 @@ export function RouteTabs({ tabs, active }: { tabs: { href: string; label: strin
 }
 
 export function ButtonTabs<K extends string>({ tabs, active, onChange, label }: { tabs: { key: K; label: string }[]; active: K; onChange: (k: K) => void; label: string }) {
+  const glide = useGlide<HTMLDivElement>(active, { className: "rounded-xl bg-accent-soft" });
   return (
-    <div role="tablist" aria-label={label} className="no-scrollbar flex gap-1 overflow-x-auto border-b border-line px-3 py-2">
+    <div ref={glide.ref} role="tablist" aria-label={label} className="no-scrollbar relative flex gap-1 overflow-x-auto border-b border-line px-3 py-2">
+      {glide.pill}
       {tabs.map((t) => (
         <button
           key={t.key}
           type="button"
           role="tab"
+          data-glide={t.key}
           aria-selected={t.key === active}
           onClick={() => onChange(t.key)}
-          className={clsx("flex min-h-[38px] flex-1 items-center justify-center rounded-xl px-4 text-sm font-semibold transition-colors", t.key === active ? "bg-accent-soft text-accent-text" : "text-fg2 hover:bg-hover-strong hover:text-fg")}
+          className={clsx("press relative z-[1] flex min-h-[38px] flex-1 items-center justify-center rounded-xl px-4 text-sm font-semibold", t.key === active ? "text-accent-text" : "text-fg2 hover:bg-hover-strong hover:text-fg")}
         >
           <span className="relative flex h-full items-center whitespace-nowrap">
             {t.label}

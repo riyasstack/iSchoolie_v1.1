@@ -22,6 +22,8 @@ import { KeyboardShortcuts } from "@/features/shortcuts";
 import { RealtimeBridge } from "@/features/realtime";
 import { SearchBox } from "@/features/search/search-box";
 import { FollowButton } from "@/features/profiles/people";
+import { useGlide } from "@/components/ui/glide";
+import { PageTransition, scrollTopIfCurrent, useAutoHideChrome, useNavDirection, usePageKey } from "./page-motion";
 import type { ProfileDTO, TrendDTO, UserListItem } from "@/lib/types";
 
 const DrawerCtx = createContext<() => void>(() => {});
@@ -60,6 +62,9 @@ export function AppShell({ children, modal }: { children: ReactNode; modal?: Rea
   const hideBoard = wide || pathname.startsWith("/compose");
   const fab = /^\/(home|explore|notifications|search|i\/topics|i\/lists$|[^/]+$)/.test(pathname) && !pathname.startsWith("/settings") && pathname !== "/messages";
   const inConversation = /^\/messages\/[^/]+$/.test(pathname) && pathname !== "/messages/compose" && pathname !== "/messages/requests";
+  const pageKey = usePageKey(pathname);
+  const traversal = useNavDirection(pageKey);
+  useAutoHideChrome(pathname);
   return (
     <DemoControlsProvider>
       <DialogsProvider>
@@ -79,7 +84,7 @@ export function AppShell({ children, modal }: { children: ReactNode; modal?: Rea
                 wide ? "sm:max-w-[960px]" : "sm:max-w-[var(--w-main)]",
               )}
             >
-              {children}
+              <PageTransition pageKey={pageKey} traversal={traversal}>{children}</PageTransition>
             </main>
             {!hideBoard && <CampusBoard />}
           </div>
@@ -106,7 +111,7 @@ function TopBar({ onOpenDrawer }: { onOpenDrawer: () => void }) {
   const pathname = usePathname();
   const onSearch = pathname.startsWith("/explore") || pathname.startsWith("/search");
   return (
-    <header role="banner" className="topbar-blur sticky top-0 z-40 border-b border-line">
+    <header role="banner" className="chrome-top topbar-blur sticky top-0 z-40 border-b border-line">
       <div className="mx-auto flex h-[var(--h-topbar)] max-w-[1260px] items-center gap-4 px-4">
         <Link href="/home" aria-label="iSchoolie home" className="flex shrink-0 items-center gap-2 rounded-xl py-1 pr-2">
           <img src="/brand/ischoolie-symbol.png" alt="" width={34} height={34} className="rounded-lg" />
@@ -135,7 +140,7 @@ function TopBar({ onOpenDrawer }: { onOpenDrawer: () => void }) {
                 scroll={false}
                 aria-label="New post"
                 onClick={(e) => { if (!requireAccount("post")) e.preventDefault(); }}
-                className="hidden min-h-[40px] items-center gap-2 rounded-xl bg-accent px-4 font-semibold text-accent-on shadow-sm transition-colors hover:bg-accent-hover sm:flex"
+                className="press hidden min-h-[40px] items-center gap-2 rounded-xl bg-accent px-4 font-semibold text-accent-on shadow-sm hover:bg-accent-hover sm:flex"
               >
                 <ComposeIcon size={17} /> New post
               </Link>
@@ -173,19 +178,23 @@ function SpacesSidebar() {
   // Guests browse public spaces only.
   const mainItems = guest ? main.filter((it) => it.key === "home" || it.key === "explore") : main;
   const libraryItems = guest ? library.filter((it) => it.key === "topics" || it.key === "moments") : library;
+  const activeKey = [...mainItems, ...libraryItems].find((it) => navActive(pathname, it.key, s.actor.handle))?.key ?? null;
+  const glide = useGlide<HTMLElement>(activeKey, { className: "rounded-xl bg-hover-strong" });
   const item = (it: { key: NavKey; href: string; badge?: number }) => {
-    const active = navActive(pathname, it.key, s.actor.handle);
+    const active = it.key === activeKey;
     const label = SPACE_LABELS[it.key];
     return (
       <Link
         key={it.key}
         href={it.href}
+        data-glide={it.key}
+        onClick={(e) => scrollTopIfCurrent(e, it.href, pathname)}
         aria-current={active ? "page" : undefined}
         aria-label={label}
         title={label}
         className={clsx(
-          "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent-text",
-          active ? "bg-hover-strong font-semibold text-fg" : "text-fg2 hover:bg-hover hover:text-fg",
+          "press group relative z-[1] flex items-center gap-3 rounded-xl px-3 py-2.5 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent-text",
+          active ? "font-semibold text-fg" : "text-fg2 hover:bg-hover hover:text-fg",
         )}
       >
         <span className="relative shrink-0">
@@ -198,7 +207,8 @@ function SpacesSidebar() {
   };
   return (
     <aside aria-label="Spaces" className="sticky top-[calc(var(--h-topbar)+16px)] hidden max-h-[calc(100dvh-var(--h-topbar)-32px)] w-[var(--w-nav-rail)] shrink-0 self-start sm:block xl:w-[var(--w-nav)]">
-      <nav aria-label="Primary" className="campus-card flex flex-col gap-0.5 overflow-y-auto p-2 no-scrollbar">
+      <nav ref={glide.ref} aria-label="Primary" className="campus-card relative flex flex-col gap-0.5 overflow-y-auto p-2 no-scrollbar">
+        {glide.pill}
         <p className="hidden px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wider text-fg2 xl:block">Spaces</p>
         {mainItems.map(item)}
         <p className="hidden px-3 pb-1 pt-4 text-xs font-semibold uppercase tracking-wider text-fg2 xl:block">Your library</p>
@@ -209,7 +219,7 @@ function SpacesSidebar() {
           align="start"
           label="More"
           trigger={
-            <button type="button" aria-label="More" title="More" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-fg transition-colors outline-none hover:bg-hover-strong focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent-text">
+            <button type="button" aria-label="More" title="More" className="press relative z-[1] flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-fg outline-none hover:bg-hover-strong focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent-text">
               <NavIcon name="more" />
               <span className="hidden xl:inline">More</span>
             </button>
@@ -381,18 +391,29 @@ function BottomDock() {
     { key: "messages", href: "/messages", badge: s.badges.messages },
   ];
   const items = guest ? all.filter((it) => it.key === "home" || it.key === "explore") : all;
+  const activeKey = items.find((it) => navActive(pathname, it.key, s.actor.handle))?.key ?? null;
+  const glide = useGlide<HTMLDivElement>(activeKey, { className: "rounded-xl bg-hover-strong" });
   // Keep the conversation input clear of the dock.
   if (/^\/messages\/[^/]+$/.test(pathname) && pathname !== "/messages/compose" && pathname !== "/messages/requests") return null;
   // Full-screen compose flow on phones.
   if (pathname.startsWith("/compose/post")) return null;
   return (
-    <nav aria-label="Primary" className="fixed inset-x-3 bottom-[calc(10px+env(safe-area-inset-bottom))] z-40 sm:hidden">
-      <div className="campus-card flex h-[var(--h-bottom-nav)] items-stretch px-1" style={{ boxShadow: "var(--shadow)" }}>
+    <nav aria-label="Primary" className="chrome-bottom fixed inset-x-3 bottom-[calc(10px+env(safe-area-inset-bottom))] z-40 sm:hidden">
+      <div ref={glide.ref} className="campus-card relative flex h-[var(--h-bottom-nav)] items-stretch px-1" style={{ boxShadow: "var(--shadow)" }}>
+        {glide.pill}
         {items.map((it) => {
-          const active = navActive(pathname, it.key, s.actor.handle);
+          const active = it.key === activeKey;
           const label = SPACE_LABELS[it.key];
           return (
-            <Link key={it.key} href={it.href} aria-label={label} aria-current={active ? "page" : undefined} className={clsx("my-1.5 flex flex-1 flex-col items-center justify-center gap-0.5 rounded-xl text-[0.6875rem] font-semibold", active ? "bg-hover-strong text-fg" : "text-fg2")}>
+            <Link
+              key={it.key}
+              href={it.href}
+              data-glide={it.key}
+              onClick={(e) => scrollTopIfCurrent(e, it.href, pathname)}
+              aria-label={label}
+              aria-current={active ? "page" : undefined}
+              className={clsx("press relative z-[1] my-1.5 flex flex-1 flex-col items-center justify-center gap-0.5 rounded-xl text-[0.6875rem] font-semibold", active ? "text-fg" : "text-fg2")}
+            >
               <span className="relative">
                 <NavIcon name={it.key} active={active} size={21} />
                 {!!it.badge && <Badge n={it.badge} />}
@@ -416,7 +437,7 @@ function MobileFab({ messages }: { messages: boolean }) {
       onClick={(e) => { if (!requireAccount(messages ? "send messages" : "post")) e.preventDefault(); }}
       scroll={false}
       aria-label={messages ? "New message" : "New post"}
-      className="fixed bottom-[calc(var(--h-bottom-nav)+24px+env(safe-area-inset-bottom))] right-4 z-40 grid h-14 w-14 place-items-center rounded-2xl bg-accent text-accent-on shadow-lg sm:hidden"
+      className="chrome-float press fixed bottom-[calc(var(--h-bottom-nav)+24px+env(safe-area-inset-bottom))] right-4 z-40 grid h-14 w-14 place-items-center rounded-2xl bg-accent text-accent-on shadow-lg sm:hidden"
     >
       {messages ? <MailPlus size={24} /> : <ComposeIcon size={24} />}
     </Link>
@@ -445,7 +466,7 @@ function MobileDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (o:
     <R.Root open={open} onOpenChange={onOpenChange}>
       <R.Portal>
         <R.Overlay className="motion-fade fixed inset-0 z-50 bg-overlay" />
-        <R.Content className="safe-top fixed inset-y-0 left-0 z-50 flex w-[290px] max-w-[86vw] flex-col overflow-y-auto rounded-r-3xl bg-bg outline-none" aria-describedby={undefined}>
+        <R.Content className="drawer-left safe-top fixed inset-y-0 left-0 z-50 flex w-[290px] max-w-[86vw] flex-col overflow-y-auto rounded-r-3xl bg-bg outline-none" aria-describedby={undefined}>
           <div className="flex items-center justify-between px-4 py-3">
             <R.Title className="font-extrabold">Your account</R.Title>
             <R.Close aria-label="Close" className="grid h-9 w-9 place-items-center rounded-xl hover:bg-hover-strong">
@@ -538,10 +559,10 @@ export function PageHeader({
     else router.push("/home");
   };
   return (
-    <div className={clsx("header-blur sticky top-[var(--h-topbar)] z-30", border && "border-b border-line")}>
+    <div className={clsx("chrome-follow header-blur sticky top-[var(--h-topbar)] z-30", border && "border-b border-line")}>
       <div className="flex min-h-[var(--h-header)] items-center gap-2 px-4">
         {back && (
-          <button type="button" onClick={goBack} aria-label="Back" className="-ml-1 mr-2 grid h-9 w-9 shrink-0 place-items-center rounded-xl text-fg hover:bg-hover-strong">
+          <button type="button" onClick={goBack} aria-label="Back" className="press -ml-1 mr-2 grid h-9 w-9 shrink-0 place-items-center rounded-xl text-fg hover:bg-hover-strong">
             <ArrowLeft size={20} />
           </button>
         )}
@@ -585,7 +606,7 @@ export async function signOut() {
 function GuestBar() {
   const ret = useReturnTo();
   return (
-    <div role="region" aria-label="Join iSchoolie" data-testid="guest-bar" className="fixed inset-x-3 bottom-[calc(var(--h-bottom-nav)+20px+env(safe-area-inset-bottom))] z-40 sm:inset-x-auto sm:bottom-5 sm:left-1/2 sm:w-[min(760px,calc(100%-32px))] sm:-translate-x-1/2">
+    <div role="region" aria-label="Join iSchoolie" data-testid="guest-bar" className="chrome-float fixed inset-x-3 bottom-[calc(var(--h-bottom-nav)+20px+env(safe-area-inset-bottom))] z-40 sm:inset-x-auto sm:bottom-5 sm:left-1/2 sm:w-[min(760px,calc(100%-32px))] sm:-translate-x-1/2">
       <div className="flex flex-col gap-3 rounded-2xl p-4 text-white shadow-lg sm:flex-row sm:items-center sm:justify-between sm:px-5" style={{ background: "rgba(29, 29, 31, 0.86)", backdropFilter: "saturate(180%) blur(20px)", WebkitBackdropFilter: "saturate(180%) blur(20px)" }}>
         <div className="min-w-0">
           <p className="text-[1.05rem] font-extrabold leading-tight sm:text-[1.2rem]">Your campus is talking</p>

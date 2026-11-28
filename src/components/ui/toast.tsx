@@ -1,16 +1,20 @@
 "use client";
-/** Legacy bottom toast. Announced politely to assistive tech. */
+/** Floating toast pills: spring in, fade out. Announced politely to assistive tech. */
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
+import clsx from "clsx";
 
 interface Toast {
   id: number;
   text: string;
   action?: { label: string; href?: string; onClick?: () => void };
   tone?: "default" | "error";
+  leaving?: boolean;
 }
 
-const Ctx = createContext<(t: Omit<Toast, "id">) => void>(() => {});
+const Ctx = createContext<(t: Omit<Toast, "id" | "leaving">) => void>(() => {});
+
+const EXIT_MS = 200;
 
 export function useToast() {
   return useContext(Ctx);
@@ -19,10 +23,13 @@ export function useToast() {
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const seq = useRef(0);
-  const show = useCallback((t: Omit<Toast, "id">) => {
+  const show = useCallback((t: Omit<Toast, "id" | "leaving">) => {
     const id = ++seq.current;
     setToasts((prev) => [...prev.slice(-2), { ...t, id }]);
-    setTimeout(() => setToasts((prev) => prev.filter((x) => x.id !== id)), t.tone === "error" ? 6000 : 4000);
+    const life = t.tone === "error" ? 6000 : 4000;
+    // Play the exit animation first, then drop the toast.
+    setTimeout(() => setToasts((prev) => prev.map((x) => (x.id === id ? { ...x, leaving: true } : x))), life - EXIT_MS);
+    setTimeout(() => setToasts((prev) => prev.filter((x) => x.id !== id)), life);
   }, []);
   return (
     <Ctx.Provider value={show}>
@@ -35,7 +42,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {toasts.map((t) => (
           <div
             key={t.id}
-            className={`motion-slide-up pointer-events-auto flex max-w-[560px] items-center gap-4 rounded-md px-4 py-3 text-post shadow-lg ${t.tone === "error" ? "bg-danger text-white" : "bg-accent text-accent-on"}`}
+            className={clsx(
+              "pointer-events-auto flex max-w-[560px] items-center gap-4 rounded-2xl px-4 py-3 text-post shadow-[0_10px_34px_rgba(0,0,0,0.22)] backdrop-blur-xl",
+              t.leaving ? "toast-out" : "toast-in",
+              t.tone === "error" ? "bg-danger text-white" : "bg-accent/95 text-accent-on",
+            )}
           >
             <span className="break-anywhere">{t.text}</span>
             {t.action &&

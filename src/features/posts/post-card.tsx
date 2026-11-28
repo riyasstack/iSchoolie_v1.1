@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { memo, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
+import { memo, useEffect, useRef, useState, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode } from "react";
 import clsx from "clsx";
 import {
   MessageSquare, Share2, PartyPopper, Send, MoreHorizontal, Pin, Hash, Trash2, BarChart3, UserPlus, UserMinus, ListPlus,
@@ -16,6 +16,7 @@ import { del, put, errorMessage } from "@/lib/api";
 import { RichText } from "./rich-text";
 import { MediaGrid, VideoPlayer } from "./post-media";
 import { isPost, usePost, useToggle, useVote, useDeletePost, usePostAction, type AnyPost } from "./cache";
+import { detailQuery } from "./detail-query";
 import { useDialogs } from "../dialogs";
 import { ProfileHoverCard } from "../profiles/hover-card";
 import { useQueryClient } from "@tanstack/react-query";
@@ -94,6 +95,38 @@ function useOpenPost(p: PostDTO) {
   };
 }
 
+/**
+ * Warms the post page before it's opened: after a short hover with a mouse, or the moment a
+ * finger touches the card. The page then renders complete in the same frame as the tap.
+ */
+function usePrefetchPost(p: PostDTO) {
+  const qc = useQueryClient();
+  const router = useRouter();
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const done = useRef(false);
+  const run = () => {
+    if (done.current) return;
+    done.current = true;
+    router.prefetch(postPath(p));
+    void qc.prefetchInfiniteQuery({ ...detailQuery(qc, p.id), staleTime: 30_000 });
+  };
+  const cancel = () => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+  };
+  useEffect(() => cancel, []);
+  return {
+    onPointerEnter: (e: PointerEvent) => {
+      if (e.pointerType === "mouse" && !done.current) timer.current = setTimeout(run, 140);
+    },
+    onPointerLeave: cancel,
+    onPointerDown: () => {
+      cancel();
+      run();
+    },
+  };
+}
+
 export const PostCard = memo(function PostCard({
   postId,
   context,
@@ -117,6 +150,7 @@ export const PostCard = memo(function PostCard({
 
 function PostCardBody({ p, context, connectTop, connectBottom, showReplyingTo }: { p: PostDTO; context?: EntryContext; connectTop?: boolean; connectBottom?: boolean; showReplyingTo: boolean }) {
   const open = useOpenPost(p);
+  const prefetch = usePrefetchPost(p);
   const onDoubleTap = useDoubleTapCheer(p);
   const [showHidden, setShowHidden] = useState(false);
   if (p.viewer.authorMuted && !showHidden && context?.type !== "pinned") {
@@ -136,6 +170,7 @@ function PostCardBody({ p, context, connectTop, connectBottom, showReplyingTo }:
     "aria-label": `Post by ${p.author.displayName}`,
     onClick: open,
     onKeyDown: (e: KeyboardEvent) => e.key === "Enter" && e.target === e.currentTarget && open(e),
+    ...prefetch,
   };
   const cardClass = "post-card mx-3 cursor-pointer border-x border-line bg-bg px-4 outline-none transition-[background-color,border-color,box-shadow] duration-150 hover:border-line-strong focus-visible:border-accent-text";
   if (!connectTop && !connectBottom) {
@@ -412,12 +447,25 @@ export function chipClass(tone: ChipTone, active?: boolean, disabled?: boolean) 
   return clsx("press flex h-8 items-center gap-1.5 rounded-xl px-2.5 text-sm font-medium disabled:opacity-50", !disabled && hover, activeCls);
 }
 
+/** A count that rolls up when it grows and down when it shrinks (cheers, shares, replies). */
+function RollingCount({ value }: { value: number }) {
+  const [state, setState] = useState<{ value: number; dir: "up" | "down" | null }>({ value, dir: null });
+  if (state.value !== value) setState({ value, dir: value > state.value ? "up" : "down" });
+  return (
+    <span className="inline-flex overflow-hidden tabular-nums">
+      <span key={value} className={state.dir ? `roll-${state.dir}` : undefined}>
+        {compactCount(value)}
+      </span>
+    </span>
+  );
+}
+
 function ChipContent({ icon, text, count, large }: { icon: ReactNode; text: string; count?: number; large?: boolean }) {
   return (
     <>
       {icon}
       <span className={large ? "inline" : "hidden sm:inline"}>{text}</span>
-      {count !== undefined && count > 0 && <span className="tabular-nums">{compactCount(count)}</span>}
+      {count !== undefined && count > 0 && <RollingCount value={count} />}
     </>
   );
 }

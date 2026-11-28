@@ -102,12 +102,22 @@ export function usePreferences(): PreferencesDTO {
 /** Applies display preferences to <html> so CSS tokens switch everywhere. */
 export function applyPreferences(p: Pick<PreferencesDTO, "theme" | "accent" | "fontScale" | "reducedMotion">) {
   const el = document.documentElement;
-  el.dataset.theme = p.theme;
-  el.dataset.accent = p.accent;
-  el.dataset.reducedMotion = String(p.reducedMotion);
-  el.style.setProperty("--font-scale", String(p.fontScale));
-  const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute("content", p.theme === "DIM" ? "#161618" : p.theme === "LIGHTS_OUT" ? "#000000" : "#f5f5f7");
+  const apply = () => {
+    el.dataset.theme = p.theme;
+    el.dataset.accent = p.accent;
+    el.dataset.reducedMotion = String(p.reducedMotion);
+    el.style.setProperty("--font-scale", String(p.fontScale));
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", p.theme === "DIM" ? "#161618" : p.theme === "LIGHTS_OUT" ? "#000000" : "#f5f5f7");
+  };
+  // Switching themes crossfades the whole screen instead of snapping (where supported).
+  const themeChanged = !!el.dataset.theme && el.dataset.theme !== p.theme;
+  const reduce = p.reducedMotion || window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (themeChanged && !reduce && "startViewTransition" in document && document.visibilityState === "visible") {
+    el.dataset.vt = "theme";
+    const t = document.startViewTransition(apply);
+    void t.finished.finally(() => delete el.dataset.vt);
+  } else apply();
 }
 
 export function SessionGate({ children }: { children: ReactNode }) {

@@ -54,7 +54,7 @@ export function Dialog({
             "motion-pop fixed z-50 flex flex-col overflow-hidden bg-bg outline-none",
             "left-1/2 top-1/2 max-h-[90dvh] w-[calc(100%-32px)] -translate-x-1/2 -translate-y-1/2 rounded-card",
             fullScreenMobile &&
-              "max-sm:inset-0 max-sm:left-0 max-sm:top-0 max-sm:h-dvh max-sm:max-h-none max-sm:w-full max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-none",
+              "dialog-sheet max-sm:inset-0 max-sm:left-0 max-sm:top-0 max-sm:h-dvh max-sm:max-h-none max-sm:w-full max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-none",
             className,
           )}
           style={{ maxWidth: width }}
